@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SDET Studios AI</title>
 
-    <link rel="icon" type="image/png" sizes="57x57" href="asset/icon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="asset/icon.png" />
+    <link rel="icon" type="image/png" sizes="57x57" href="asset/logo.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="asset/logo.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -275,11 +275,6 @@
         position: relative;
       }
 
-      .message-wrapper:hover .message-actions {
-        opacity: 1;
-        pointer-events: auto;
-      }
-
       .message-role {
         font-size: 0.75rem;
         font-weight: 600;
@@ -338,7 +333,7 @@
         color: var(--text-primary);
       }
 
-      /* --- Code Blocks (Modeled after Next.js project) --- */
+      /* --- Code Blocks --- */
       .code-block-wrapper {
         margin: 1rem 0;
         border: 1px solid var(--border-subtle);
@@ -391,12 +386,12 @@
         color: inherit;
       }
 
-      /* --- Actions --- */
+      /* --- Actions (UPDATED: Visible by Default) --- */
       .message-actions {
         margin-top: 0.8rem;
         display: flex;
         gap: 6px;
-        opacity: 0;
+        opacity: 1; /* Changed from 0 to 1 */
         transition: opacity 0.2s ease;
       }
 

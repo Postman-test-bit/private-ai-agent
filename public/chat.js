@@ -12,25 +12,33 @@ let isProcessing = false;
 let requestsLeft = 50; // Daily Limit
 
 // --- Markdown & Highlight Setup ---
-// Configure marked to use highlight.js
+
+// Configure marked options (Disable conflicting 'highlight' option)
 marked.setOptions({
-  highlight: function (code, lang) {
-    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-    return hljs.highlight(code, { language }).value;
-  },
-  langPrefix: 'hljs language-', // highlight.js css expects this
-  breaks: true, // GFM breaks
+  breaks: true, // Enable GFM line breaks
+  langPrefix: "hljs language-",
 });
 
-// Custom renderer for code blocks to add Header with Language & Copy Button
+// Custom renderer for code blocks
 const renderer = new marked.Renderer();
 renderer.code = function (code, language) {
+  // Safety: Ensure code is a string to prevent "e.replace is not a function" errors
+  const validCode = code ? String(code) : "";
   const validLang = !!(language && hljs.getLanguage(language));
-  const highlighted = validLang
-    ? hljs.highlight(code, { language }).value
-    : hljs.highlightAuto(code).value;
-  
-  const displayLang = language || 'code';
+
+  let highlighted;
+  try {
+    if (validLang) {
+      highlighted = hljs.highlight(validCode, { language }).value;
+    } else {
+      highlighted = hljs.highlightAuto(validCode).value;
+    }
+  } catch (e) {
+    console.warn("Highlighting failed, falling back to plain text:", e);
+    highlighted = escapeHtml(validCode);
+  }
+
+  const displayLang = language || "text";
 
   return `
     <div class="code-block-wrapper">
@@ -42,40 +50,86 @@ renderer.code = function (code, language) {
         </button>
       </div>
       <pre><code class="hljs ${language}">${highlighted}</code></pre>
-      <div style="display:none" class="raw-code">${escapeHtml(code)}</div> 
+      <div style="display:none" class="raw-code">${escapeHtml(validCode)}</div> 
     </div>
   `;
 };
+
 marked.use({ renderer });
 
-// Global handler for the Copy Code button inside generated HTML
-window.copyCode = function(btn) {
-  // The raw code is stored in a hidden div sibling to the pre
-  const wrapper = btn.closest('.code-block-wrapper');
-  const rawCodeDiv = wrapper.querySelector('.raw-code');
-  
-  // We need to unescape HTML entities to get back the raw code
-  const textArea = document.createElement('textarea');
-  textArea.innerHTML = rawCodeDiv.innerHTML;
-  const val = textArea.value;
+// Global handler for the Copy Code button
+window.copyCode = function (btn) {
+  const wrapper = btn.closest(".code-block-wrapper");
+  const rawCodeDiv = wrapper.querySelector(".raw-code");
 
-  navigator.clipboard.writeText(val).then(() => {
-    const originalText = btn.innerHTML;
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied`;
-    setTimeout(() => {
-      btn.innerHTML = originalText;
-    }, 2000);
-  });
+  if (!rawCodeDiv) return;
+
+  // Create a temporary textarea to decode HTML entities (e.g., &lt; to <)
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = rawCodeDiv.innerHTML;
+  const val = textarea.value;
+
+  navigator.clipboard
+    .writeText(val)
+    .then(() => {
+      const originalContent = btn.innerHTML;
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied`;
+      setTimeout(() => {
+        btn.innerHTML = originalContent;
+      }, 2000);
+    })
+    .catch((err) => {
+      console.error("Failed to copy:", err);
+    });
 };
 
 function renderMarkdown(text) {
   if (!text) return "";
-  const rawMarkup = marked.parse(text);
-  // Sanitize to prevent XSS
-  return DOMPurify.sanitize(rawMarkup, {
-    ADD_TAGS: ['div', 'span', 'button', 'svg', 'rect', 'path', 'line', 'polyline', 'circle', 'pre', 'code'],
-    ADD_ATTR: ['class', 'viewBox', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'x1', 'y1', 'x2', 'y2', 'points', 'onclick']
-  });
+  try {
+    // Parse markdown
+    const rawMarkup = marked.parse(text);
+    // Sanitize
+    return DOMPurify.sanitize(rawMarkup, {
+      ADD_TAGS: [
+        "div",
+        "span",
+        "button",
+        "svg",
+        "rect",
+        "path",
+        "line",
+        "polyline",
+        "circle",
+        "pre",
+        "code",
+      ],
+      ADD_ATTR: [
+        "class",
+        "viewBox",
+        "fill",
+        "stroke",
+        "stroke-width",
+        "stroke-linecap",
+        "stroke-linejoin",
+        "d",
+        "x",
+        "y",
+        "width",
+        "height",
+        "rx",
+        "ry",
+        "x1",
+        "y1",
+        "x2",
+        "y2",
+        "points",
+        "onclick",
+      ],
+    });
+  } catch (e) {
+    console.error("Markdown rendering failed:", e);
+    return escapeHtml(text);
+  }
 }
 
 // --- Icons ---
@@ -132,14 +186,11 @@ function deleteSession(e, sessionId) {
   saveSessions();
 
   if (chatSessions.length === 0) {
-    // If no sessions left, create a new one
     const newId = createNewSession();
     switchToSession(newId);
   } else if (currentSessionId === sessionId) {
-    // If we deleted the active session, switch to the first available one
     switchToSession(chatSessions[0].id);
   } else {
-    // Just re-render list
     renderSessions();
   }
 }
@@ -169,12 +220,10 @@ function renderSessions() {
       sessionEl.classList.add("active");
     }
 
-    // Title Span
     const titleSpan = document.createElement("span");
     titleSpan.className = "session-title";
     titleSpan.textContent = session.title;
 
-    // Delete Button
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "delete-session-btn";
     deleteBtn.innerHTML = ICONS.delete;
@@ -214,7 +263,7 @@ function createMessageElement(msg, index) {
   const contentDiv = document.createElement("div");
   contentDiv.className = "message-content";
 
-  // CHANGED: Use Markdown Rendering instead of simple escaping
+  // Use Markdown Rendering
   contentDiv.innerHTML = renderMarkdown(msg.content);
 
   // 3. Actions
@@ -227,7 +276,6 @@ function createMessageElement(msg, index) {
     actionsDiv.appendChild(editBtn);
     actionsDiv.appendChild(deleteBtn);
   } else {
-    // Logic: If it's the very first message (Index 0) AND it's an assistant, DO NOT show actions.
     const isGreeting = index === 0 && msg.role === "assistant";
 
     if (!isGreeting) {
@@ -288,7 +336,6 @@ function regenerateMessage(index) {
   const session = chatSessions.find((s) => s.id === currentSessionId);
   if (!session || isProcessing) return;
 
-  // Decrement request count for regeneration as well
   if (requestsLeft <= 0) {
     alert("Daily limit reached.");
     return;
@@ -359,7 +406,7 @@ function saveEdit(index, newContent) {
 
   if (requestsLeft <= 0) {
     alert("Daily limit reached.");
-    renderMessages(session.history); // restore view
+    renderMessages(session.history);
     return;
   }
   requestsLeft--;
@@ -367,7 +414,6 @@ function saveEdit(index, newContent) {
 
   session.history[index].content = newContent;
 
-  // Remove all history after this index to regenerate fresh
   const elementsToRemove = session.history.length - 1 - index;
   if (elementsToRemove > 0) {
     session.history.splice(index + 1, elementsToRemove);
@@ -424,9 +470,10 @@ function updateSessionTitle(sessionId, userMessage) {
   }
 }
 
+// Fallback escaping if markdown fails or for raw code blocks
 function escapeHtml(text) {
   if (!text) return "";
-  return text
+  return String(text)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -467,11 +514,9 @@ async function sendMessage() {
   const session = chatSessions.find((s) => s.id === currentSessionId);
   if (!session) return;
 
-  // Decrement Counter
   requestsLeft--;
   updateRequestCount();
 
-  // 1. Add User Message
   const userMsgObj = { role: "user", content: message };
   session.history.push(userMsgObj);
 
@@ -494,7 +539,6 @@ async function streamResponse(session) {
   sendButton.disabled = true;
   typingIndicator.classList.add("visible");
 
-  // Placeholder for Assistant
   const assistantMsgObj = { role: "assistant", content: "" };
   const assistantIndex = session.history.push(assistantMsgObj) - 1;
 
@@ -522,7 +566,6 @@ async function streamResponse(session) {
     let buffer = "";
 
     const flushText = () => {
-      // CHANGED: Render Markdown during streaming
       contentTarget.innerHTML = renderMarkdown(fullResponseText);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     };
