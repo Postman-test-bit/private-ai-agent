@@ -13,7 +13,7 @@ let requestsLeft = 50; // Daily Limit
 
 // --- Markdown & Highlight Setup ---
 
-// Configure marked options (Disable conflicting 'highlight' option)
+// Configure marked options
 marked.setOptions({
   breaks: true, // Enable GFM line breaks
   langPrefix: "hljs language-",
@@ -22,7 +22,6 @@ marked.setOptions({
 // Custom renderer for code blocks
 const renderer = new marked.Renderer();
 renderer.code = function (code, language) {
-  // Safety: Ensure code is a string to prevent "e.replace is not a function" errors
   const validCode = code ? String(code) : "";
   const validLang = !!(language && hljs.getLanguage(language));
 
@@ -64,7 +63,6 @@ window.copyCode = function (btn) {
 
   if (!rawCodeDiv) return;
 
-  // Create a temporary textarea to decode HTML entities (e.g., &lt; to <)
   const textarea = document.createElement("textarea");
   textarea.innerHTML = rawCodeDiv.innerHTML;
   const val = textarea.value;
@@ -86,8 +84,17 @@ window.copyCode = function (btn) {
 function renderMarkdown(text) {
   if (!text) return "";
   try {
-    // Parse markdown
-    const rawMarkup = marked.parse(text);
+    // Force sync parsing explicitly (though pinning version 12.0.2 is the main fix)
+    const rawMarkup = marked.parse(text, { async: false });
+
+    // Safety check: if marked returned a Promise (should not happen with v12), fallback to text
+    if (typeof rawMarkup !== "string") {
+      console.warn(
+        "Marked returned non-string (likely Promise). Fallback to plain text."
+      );
+      return escapeHtml(text);
+    }
+
     // Sanitize
     return DOMPurify.sanitize(rawMarkup, {
       ADD_TAGS: [
