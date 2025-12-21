@@ -11,6 +11,73 @@ let currentSessionId = null;
 let isProcessing = false;
 let requestsLeft = 50; // Daily Limit
 
+// --- Markdown & Highlight Setup ---
+// Configure marked to use highlight.js
+marked.setOptions({
+  highlight: function (code, lang) {
+    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+    return hljs.highlight(code, { language }).value;
+  },
+  langPrefix: 'hljs language-', // highlight.js css expects this
+  breaks: true, // GFM breaks
+});
+
+// Custom renderer for code blocks to add Header with Language & Copy Button
+const renderer = new marked.Renderer();
+renderer.code = function (code, language) {
+  const validLang = !!(language && hljs.getLanguage(language));
+  const highlighted = validLang
+    ? hljs.highlight(code, { language }).value
+    : hljs.highlightAuto(code).value;
+  
+  const displayLang = language || 'code';
+
+  return `
+    <div class="code-block-wrapper">
+      <div class="code-block-header">
+        <span class="code-lang">${displayLang}</span>
+        <button class="code-copy-btn" onclick="copyCode(this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          Copy
+        </button>
+      </div>
+      <pre><code class="hljs ${language}">${highlighted}</code></pre>
+      <div style="display:none" class="raw-code">${escapeHtml(code)}</div> 
+    </div>
+  `;
+};
+marked.use({ renderer });
+
+// Global handler for the Copy Code button inside generated HTML
+window.copyCode = function(btn) {
+  // The raw code is stored in a hidden div sibling to the pre
+  const wrapper = btn.closest('.code-block-wrapper');
+  const rawCodeDiv = wrapper.querySelector('.raw-code');
+  
+  // We need to unescape HTML entities to get back the raw code
+  const textArea = document.createElement('textarea');
+  textArea.innerHTML = rawCodeDiv.innerHTML;
+  const val = textArea.value;
+
+  navigator.clipboard.writeText(val).then(() => {
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied`;
+    setTimeout(() => {
+      btn.innerHTML = originalText;
+    }, 2000);
+  });
+};
+
+function renderMarkdown(text) {
+  if (!text) return "";
+  const rawMarkup = marked.parse(text);
+  // Sanitize to prevent XSS
+  return DOMPurify.sanitize(rawMarkup, {
+    ADD_TAGS: ['div', 'span', 'button', 'svg', 'rect', 'path', 'line', 'polyline', 'circle', 'pre', 'code'],
+    ADD_ATTR: ['class', 'viewBox', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'x1', 'y1', 'x2', 'y2', 'points', 'onclick']
+  });
+}
+
 // --- Icons ---
 const ICONS = {
   user: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`,
@@ -146,7 +213,9 @@ function createMessageElement(msg, index) {
   // 2. Content
   const contentDiv = document.createElement("div");
   contentDiv.className = "message-content";
-  contentDiv.innerHTML = `<p>${escapeHtml(msg.content)}</p>`;
+
+  // CHANGED: Use Markdown Rendering instead of simple escaping
+  contentDiv.innerHTML = renderMarkdown(msg.content);
 
   // 3. Actions
   const actionsDiv = document.createElement("div");
@@ -433,7 +502,7 @@ async function streamResponse(session) {
   chatMessages.appendChild(assistantEl);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 
-  const contentTarget = assistantEl.querySelector(".message-content p");
+  const contentTarget = assistantEl.querySelector(".message-content");
 
   try {
     const response = await fetch("/api/chat", {
@@ -453,7 +522,8 @@ async function streamResponse(session) {
     let buffer = "";
 
     const flushText = () => {
-      contentTarget.innerHTML = escapeHtml(fullResponseText);
+      // CHANGED: Render Markdown during streaming
+      contentTarget.innerHTML = renderMarkdown(fullResponseText);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     };
 

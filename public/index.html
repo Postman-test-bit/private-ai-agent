@@ -6,7 +6,6 @@
     <title>SDET Studios AI</title>
 
     <link rel="icon" type="image/png" sizes="57x57" href="asset/icon.png" />
-    
     <link rel="apple-touch-icon" sizes="180x180" href="asset/icon.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -15,6 +14,11 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"
       rel="stylesheet"
     />
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
     <style>
       :root {
@@ -152,7 +156,6 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        /* session-item */
       }
 
       .chat-session-item:hover {
@@ -179,7 +182,7 @@
         color: var(--text-tertiary);
         cursor: pointer;
         padding: 4px;
-        display: none; /* Hidden by default */
+        display: none;
         border-radius: 4px;
         margin-left: 8px;
       }
@@ -287,25 +290,108 @@
         gap: 8px;
       }
 
+      /* --- Markdown Content Styling --- */
       .message-content {
         line-height: 1.7;
         font-size: 1rem;
         color: var(--text-secondary);
       }
 
-      .message-content p {
-        margin-bottom: 1rem;
-        white-space: pre-wrap;
-      }
-
-      .message-content p:last-child {
-        margin-bottom: 0;
-      }
-
       .user-message .message-content {
         color: var(--text-primary);
       }
 
+      /* Text Elements */
+      .message-content p { margin-bottom: 1rem; }
+      .message-content p:last-child { margin-bottom: 0; }
+      .message-content strong { font-weight: 600; color: var(--text-primary); }
+      .message-content em { font-style: italic; }
+      .message-content a { color: var(--text-primary); text-decoration: underline; }
+      
+      /* Headers */
+      .message-content h1, .message-content h2, .message-content h3, 
+      .message-content h4, .message-content h5, .message-content h6 {
+        color: var(--text-primary);
+        font-weight: 600;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .message-content h1 { font-size: 1.5em; }
+      .message-content h2 { font-size: 1.25em; }
+      .message-content h3 { font-size: 1.1em; }
+
+      /* Lists */
+      .message-content ul, .message-content ol {
+        margin-bottom: 1rem;
+        padding-left: 1.5rem;
+      }
+      .message-content li { margin-bottom: 0.25rem; }
+
+      /* Inline Code */
+      .message-content :not(pre) > code {
+        background: var(--bg-surface-hover);
+        border: 1px solid var(--border-subtle);
+        padding: 0.2em 0.4em;
+        border-radius: 4px;
+        font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+        font-size: 0.9em;
+        color: var(--text-primary);
+      }
+
+      /* --- Code Blocks (Modeled after Next.js project) --- */
+      .code-block-wrapper {
+        margin: 1rem 0;
+        border: 1px solid var(--border-subtle);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #0d1117; /* GitHub Dark bg match */
+      }
+
+      .code-block-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: var(--bg-surface);
+        border-bottom: 1px solid var(--border-subtle);
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-family: sans-serif;
+      }
+
+      .code-lang {
+        font-weight: 500;
+        text-transform: uppercase;
+      }
+
+      .code-copy-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.75rem;
+      }
+      .code-copy-btn:hover { color: var(--text-primary); }
+
+      .message-content pre {
+        margin: 0;
+        padding: 1rem;
+        overflow-x: auto;
+      }
+
+      .message-content pre code {
+        background: transparent;
+        padding: 0;
+        border: none;
+        font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+        font-size: 0.9em;
+        color: inherit;
+      }
+
+      /* --- Actions --- */
       .message-actions {
         margin-top: 0.8rem;
         display: flex;
@@ -357,8 +443,7 @@
         justify-content: flex-end;
       }
 
-      .save-btn,
-      .cancel-btn {
+      .save-btn, .cancel-btn {
         padding: 6px 12px;
         border-radius: 4px;
         font-size: 0.85rem;
@@ -367,16 +452,8 @@
         border: none;
       }
 
-      .save-btn {
-        background: var(--text-primary);
-        color: var(--bg-app);
-      }
-
-      .cancel-btn {
-        background: transparent;
-        border: 1px solid var(--border-strong);
-        color: var(--text-primary);
-      }
+      .save-btn { background: var(--text-primary); color: var(--bg-app); }
+      .cancel-btn { background: transparent; border: 1px solid var(--border-strong); color: var(--text-primary); }
 
       /* --- Input Area --- */
       .input-area {
@@ -418,9 +495,7 @@
         line-height: 1.5;
       }
 
-      #user-input::placeholder {
-        color: var(--text-tertiary);
-      }
+      #user-input::placeholder { color: var(--text-tertiary); }
 
       #send-button {
         position: absolute;
@@ -439,10 +514,7 @@
         transition: opacity 0.2s;
       }
 
-      #send-button:disabled {
-        opacity: 0.5;
-        cursor: default;
-      }
+      #send-button:disabled { opacity: 0.5; cursor: default; }
 
       #typing-indicator {
         height: 20px;
@@ -456,9 +528,7 @@
         width: 100%;
       }
 
-      #typing-indicator.visible {
-        opacity: 1;
-      }
+      #typing-indicator.visible { opacity: 1; }
 
       @media (max-width: 768px) {
         .sidebar {
@@ -468,15 +538,9 @@
           height: 100%;
           transition: left 0.3s ease;
         }
-        .sidebar.open {
-          left: 0;
-        }
-        .message-wrapper {
-          padding: 0 1rem;
-        }
-        .input-container {
-          margin: 0 1rem;
-        }
+        .sidebar.open { left: 0; }
+        .message-wrapper { padding: 0 1rem; }
+        .input-container { margin: 0 1rem; }
       }
     </style>
   </head>
@@ -489,16 +553,7 @@
             <div class="logo-text">SDET Studios</div>
           </div>
           <button class="new-chat-btn" id="new-chat-btn">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
@@ -511,11 +566,7 @@
       <div class="chat-container">
         <header>
           <div class="header-left">
-            <div
-              style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px"
-            >
-              Assistant
-            </div>
+            <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px">Assistant</div>
             <div class="model-badge">SDET-v1</div>
           </div>
           <div class="requests-counter">
@@ -536,16 +587,7 @@
               autofocus
             ></textarea>
             <button id="send-button">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="19" x2="12" y2="5"></line>
                 <polyline points="5 12 12 5 19 12"></polyline>
               </svg>
