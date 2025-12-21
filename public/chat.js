@@ -1,230 +1,471 @@
-/**
- * LLM Chat App Frontend
- *
- * Handles the chat UI interactions and communication with the backend API.
- */
-
-// DOM elements
 const chatMessages = document.getElementById("chat-messages");
 const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
+const chatSessionsContainer = document.getElementById("chat-sessions");
+const newChatBtn = document.getElementById("new-chat-btn");
 
-// Chat state
-let chatHistory = [
-	{
-		role: "assistant",
-		content:
-			"Hello! I'm an LLM chat app powered by Cloudflare Workers AI. How can I help you today?",
-	},
-];
+let chatSessions = [];
+let currentSessionId = null;
 let isProcessing = false;
 
-// Auto-resize textarea as user types
-userInput.addEventListener("input", function () {
-	this.style.height = "auto";
-	this.style.height = this.scrollHeight + "px";
-});
+// --- Icons ---
+const ICONS = {
+  user: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`,
+  assistant: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`,
+  edit: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`,
+  delete: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+  copy: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
+  regenerate: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>`,
+  thumbUp: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>`,
+  thumbDown: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>`,
+};
 
-// Send message on Enter (without Shift)
-userInput.addEventListener("keydown", function (e) {
-	if (e.key === "Enter" && !e.shiftKey) {
-		e.preventDefault();
-		sendMessage();
-	}
-});
-
-// Send button click handler
-sendButton.addEventListener("click", sendMessage);
-
-/**
- * Sends a message to the chat API and processes the response
- */
-async function sendMessage() {
-	const message = userInput.value.trim();
-
-	// Don't send empty messages
-	if (message === "" || isProcessing) return;
-
-	// Disable input while processing
-	isProcessing = true;
-	userInput.disabled = true;
-	sendButton.disabled = true;
-
-	// Add user message to chat
-	addMessageToChat("user", message);
-
-	// Clear input
-	userInput.value = "";
-	userInput.style.height = "auto";
-
-	// Show typing indicator
-	typingIndicator.classList.add("visible");
-
-	// Add message to history
-	chatHistory.push({ role: "user", content: message });
-
-	try {
-		// Create new assistant response element
-		const assistantMessageEl = document.createElement("div");
-		assistantMessageEl.className = "message assistant-message";
-		assistantMessageEl.innerHTML = "<p></p>";
-		chatMessages.appendChild(assistantMessageEl);
-		const assistantTextEl = assistantMessageEl.querySelector("p");
-
-		// Scroll to bottom
-		chatMessages.scrollTop = chatMessages.scrollHeight;
-
-		// Send request to API
-		const response = await fetch("/api/chat", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				messages: chatHistory,
-			}),
-		});
-
-		// Handle errors
-		if (!response.ok) {
-			throw new Error("Failed to get response");
-		}
-		if (!response.body) {
-			throw new Error("Response body is null");
-		}
-
-		// Process streaming response
-		const reader = response.body.getReader();
-		const decoder = new TextDecoder();
-		let responseText = "";
-		let buffer = "";
-		const flushAssistantText = () => {
-			assistantTextEl.textContent = responseText;
-			chatMessages.scrollTop = chatMessages.scrollHeight;
-		};
-
-		let sawDone = false;
-		while (true) {
-			const { done, value } = await reader.read();
-
-			if (done) {
-				// Process any remaining complete events in buffer
-				const parsed = consumeSseEvents(buffer + "\n\n");
-				for (const data of parsed.events) {
-					if (data === "[DONE]") {
-						break;
-					}
-					try {
-						const jsonData = JSON.parse(data);
-						// Handle both Workers AI format (response) and OpenAI format (choices[0].delta.content)
-						let content = "";
-						if (
-							typeof jsonData.response === "string" &&
-							jsonData.response.length > 0
-						) {
-							content = jsonData.response;
-						} else if (jsonData.choices?.[0]?.delta?.content) {
-							content = jsonData.choices[0].delta.content;
-						}
-						if (content) {
-							responseText += content;
-							flushAssistantText();
-						}
-					} catch (e) {
-						console.error("Error parsing SSE data as JSON:", e, data);
-					}
-				}
-				break;
-			}
-
-			// Decode chunk
-			buffer += decoder.decode(value, { stream: true });
-			const parsed = consumeSseEvents(buffer);
-			buffer = parsed.buffer;
-			for (const data of parsed.events) {
-				if (data === "[DONE]") {
-					sawDone = true;
-					buffer = "";
-					break;
-				}
-				try {
-					const jsonData = JSON.parse(data);
-					// Handle both Workers AI format (response) and OpenAI format (choices[0].delta.content)
-					let content = "";
-					if (
-						typeof jsonData.response === "string" &&
-						jsonData.response.length > 0
-					) {
-						content = jsonData.response;
-					} else if (jsonData.choices?.[0]?.delta?.content) {
-						content = jsonData.choices[0].delta.content;
-					}
-					if (content) {
-						responseText += content;
-						flushAssistantText();
-					}
-				} catch (e) {
-					console.error("Error parsing SSE data as JSON:", e, data);
-				}
-			}
-			if (sawDone) {
-				break;
-			}
-		}
-
-		// Add completed response to chat history
-		if (responseText.length > 0) {
-			chatHistory.push({ role: "assistant", content: responseText });
-		}
-	} catch (error) {
-		console.error("Error:", error);
-		addMessageToChat(
-			"assistant",
-			"Sorry, there was an error processing your request.",
-		);
-	} finally {
-		// Hide typing indicator
-		typingIndicator.classList.remove("visible");
-
-		// Re-enable input
-		isProcessing = false;
-		userInput.disabled = false;
-		sendButton.disabled = false;
-		userInput.focus();
-	}
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
 
-/**
- * Helper function to add message to chat
- */
-function addMessageToChat(role, content) {
-	const messageEl = document.createElement("div");
-	messageEl.className = `message ${role}-message`;
-	messageEl.innerHTML = `<p>${content}</p>`;
-	chatMessages.appendChild(messageEl);
+function createNewSession() {
+  const sessionId = generateId();
+  const session = {
+    id: sessionId,
+    title: "New Chat",
+    history: [
+      {
+        role: "assistant",
+        content:
+          "Hello. I am your SDET coding agent. Ready for your instructions.",
+      },
+    ],
+  };
+  chatSessions.unshift(session);
+  saveSessions();
+  return sessionId;
+}
 
-	// Scroll to bottom
-	chatMessages.scrollTop = chatMessages.scrollHeight;
+function switchToSession(sessionId) {
+  currentSessionId = sessionId;
+  const session = chatSessions.find((s) => s.id === sessionId);
+  if (!session) return;
+
+  renderMessages(session.history);
+  renderSessions();
+  setTimeout(() => {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, 0);
+}
+
+// --- Rendering Logic ---
+
+function renderMessages(history) {
+  chatMessages.innerHTML = "";
+  history.forEach((msg, index) => {
+    // Fix for "ghost" messages: Don't render empty messages unless it's the very last one (likely streaming)
+    if (!msg.content && index !== history.length - 1) return;
+
+    const msgEl = createMessageElement(msg, index);
+    chatMessages.appendChild(msgEl);
+  });
+}
+
+function createMessageElement(msg, index) {
+  const wrapper = document.createElement("div");
+  wrapper.className = `message-wrapper ${msg.role}-message`;
+  wrapper.dataset.index = index;
+
+  // 1. Role Header
+  const roleHeader = document.createElement("div");
+  roleHeader.className = "message-role";
+  roleHeader.innerHTML = `${ICONS[msg.role]} ${
+    msg.role === "user" ? "You" : "SDET AI"
+  }`;
+
+  // 2. Content
+  const contentDiv = document.createElement("div");
+  contentDiv.className = "message-content";
+  contentDiv.innerHTML = `<p>${escapeHtml(msg.content)}</p>`;
+
+  // 3. Actions
+  const actionsDiv = document.createElement("div");
+  actionsDiv.className = "message-actions";
+
+  if (msg.role === "user") {
+    // User Actions: Edit, Delete
+    const editBtn = createBtn("edit", "Edit", () => enterEditMode(index));
+    const deleteBtn = createBtn("delete", "Delete", () => deleteMessage(index));
+    actionsDiv.appendChild(editBtn);
+    actionsDiv.appendChild(deleteBtn);
+  } else {
+    // AI Actions: Copy, Regenerate, Like, Dislike
+    const copyBtn = createBtn("copy", "Copy", () =>
+      copyToClipboard(msg.content)
+    );
+    const regenBtn = createBtn("regenerate", "Regenerate", () =>
+      regenerateMessage(index)
+    );
+    const likeBtn = createBtn("thumbUp", "Good response", () =>
+      console.log("Liked", index)
+    );
+    const dislikeBtn = createBtn("thumbDown", "Bad response", () =>
+      console.log("Disliked", index)
+    );
+
+    actionsDiv.appendChild(copyBtn);
+    actionsDiv.appendChild(regenBtn);
+    actionsDiv.appendChild(likeBtn);
+    actionsDiv.appendChild(dislikeBtn);
+  }
+
+  wrapper.appendChild(roleHeader);
+  wrapper.appendChild(contentDiv);
+  wrapper.appendChild(actionsDiv);
+
+  return wrapper;
+}
+
+function createBtn(iconName, title, onClick) {
+  const btn = document.createElement("button");
+  btn.className = `action-btn ${iconName}`;
+  btn.innerHTML = ICONS[iconName];
+  btn.title = title;
+  btn.onclick = onClick;
+  return btn;
+}
+
+// --- Actions Implementation ---
+
+function deleteMessage(index) {
+  const session = chatSessions.find((s) => s.id === currentSessionId);
+  if (!session) return;
+
+  if (confirm("Delete this message?")) {
+    // Remove 1 item at index
+    session.history.splice(index, 1);
+    saveSessions();
+    // Complete re-render guarantees no "ghost" elements remain
+    renderMessages(session.history);
+  }
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    // Optional: Show a small toast or tooltip
+    console.log("Copied to clipboard");
+  });
+}
+
+function regenerateMessage(index) {
+  const session = chatSessions.find((s) => s.id === currentSessionId);
+  if (!session || isProcessing) return;
+
+  // To regenerate, we need to resend the context up to the PREVIOUS message
+  // Usually, regeneration means "delete this AI response and try again"
+
+  // 1. Remove this AI message
+  session.history.splice(index, 1);
+  saveSessions();
+  renderMessages(session.history);
+
+  // 2. Trigger fetch based on remaining history
+  // We don't have a specific "user prompt" here, we just re-run the thread
+  // So we invoke the API call logic directly
+  streamResponse(session);
+}
+
+function enterEditMode(index) {
+  const session = chatSessions.find((s) => s.id === currentSessionId);
+  if (!session) return;
+
+  const wrapper = chatMessages.querySelector(
+    `.message-wrapper[data-index="${index}"]`
+  );
+  if (!wrapper) return; // Safety check
+
+  const contentDiv = wrapper.querySelector(".message-content");
+  const actionsDiv = wrapper.querySelector(".message-actions");
+
+  actionsDiv.style.display = "none";
+
+  const currentText = session.history[index].content;
+  contentDiv.innerHTML = "";
+
+  const textarea = document.createElement("textarea");
+  textarea.className = "edit-textarea";
+  textarea.value = currentText;
+  textarea.rows = 3;
+
+  setTimeout(() => {
+    textarea.style.height = "auto";
+    textarea.style.height = textarea.scrollHeight + 10 + "px";
+  }, 0);
+
+  const editControls = document.createElement("div");
+  editControls.className = "edit-actions";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "save-btn";
+  saveBtn.textContent = "Save & Submit";
+  saveBtn.onclick = () => saveEdit(index, textarea.value);
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "cancel-btn";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.onclick = () => {
+    renderMessages(session.history);
+  };
+
+  editControls.appendChild(cancelBtn);
+  editControls.appendChild(saveBtn);
+
+  contentDiv.appendChild(textarea);
+  contentDiv.appendChild(editControls);
+  textarea.focus();
+}
+
+function saveEdit(index, newContent) {
+  const session = chatSessions.find((s) => s.id === currentSessionId);
+  if (!session) return;
+
+  // Update content
+  session.history[index].content = newContent;
+
+  // If user edits their message, usually we want to clear everything AFTER it and regenerate response
+  // Remove all history after this index
+  const elementsToRemove = session.history.length - 1 - index;
+  if (elementsToRemove > 0) {
+    session.history.splice(index + 1, elementsToRemove);
+  }
+
+  saveSessions();
+  renderMessages(session.history);
+
+  // Trigger new response
+  streamResponse(session);
+}
+
+// --- Core App Logic ---
+
+function renderSessions() {
+  chatSessionsContainer.innerHTML = "";
+  chatSessions.forEach((session) => {
+    const sessionEl = document.createElement("div");
+    sessionEl.className = "chat-session-item";
+    if (session.id === currentSessionId) {
+      sessionEl.classList.add("active");
+    }
+    sessionEl.textContent = session.title;
+    sessionEl.addEventListener("click", () => switchToSession(session.id));
+    chatSessionsContainer.appendChild(sessionEl);
+  });
+}
+
+function saveSessions() {
+  try {
+    localStorage.setItem("chatSessions", JSON.stringify(chatSessions));
+    localStorage.setItem("currentSessionId", currentSessionId);
+  } catch (e) {
+    console.error("Failed to save sessions:", e);
+  }
+}
+
+function loadSessions() {
+  try {
+    const saved = localStorage.getItem("chatSessions");
+    const savedCurrentId = localStorage.getItem("currentSessionId");
+    if (saved) {
+      chatSessions = JSON.parse(saved);
+      currentSessionId = savedCurrentId;
+      if (
+        !currentSessionId ||
+        !chatSessions.find((s) => s.id === currentSessionId)
+      ) {
+        currentSessionId = chatSessions[0]?.id || createNewSession();
+      }
+    } else {
+      currentSessionId = createNewSession();
+    }
+    switchToSession(currentSessionId);
+  } catch (e) {
+    console.error("Failed to load sessions:", e);
+    currentSessionId = createNewSession();
+    switchToSession(currentSessionId);
+  }
+}
+
+function updateSessionTitle(sessionId, userMessage) {
+  const session = chatSessions.find((s) => s.id === sessionId);
+  if (session && session.history.length <= 2) {
+    session.title =
+      userMessage.substring(0, 30) + (userMessage.length > 30 ? "..." : "");
+    saveSessions();
+    renderSessions();
+  }
+}
+
+function escapeHtml(text) {
+  if (!text) return "";
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+userInput.addEventListener("input", function () {
+  this.style.height = "auto";
+  this.style.height = Math.min(this.scrollHeight, 200) + "px";
+});
+
+userInput.addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+sendButton.addEventListener("click", sendMessage);
+
+newChatBtn.addEventListener("click", () => {
+  const newSessionId = createNewSession();
+  switchToSession(newSessionId);
+});
+
+// --- Message Sending & Streaming ---
+
+async function sendMessage() {
+  const message = userInput.value.trim();
+  if (message === "" || isProcessing) return;
+
+  const session = chatSessions.find((s) => s.id === currentSessionId);
+  if (!session) return;
+
+  // 1. Add User Message
+  const userMsgObj = { role: "user", content: message };
+  session.history.push(userMsgObj);
+
+  userInput.value = "";
+  userInput.style.height = "auto";
+
+  // Quick Render for User Message
+  chatMessages.appendChild(
+    createMessageElement(userMsgObj, session.history.length - 1)
+  );
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  updateSessionTitle(currentSessionId, message);
+
+  // 2. Start Stream
+  streamResponse(session);
+}
+
+// Refactored streaming logic to be reusable (for regenerate/edit)
+async function streamResponse(session) {
+  isProcessing = true;
+  userInput.disabled = true;
+  sendButton.disabled = true;
+  typingIndicator.classList.add("visible");
+
+  // Placeholder for Assistant
+  const assistantMsgObj = { role: "assistant", content: "" };
+  const assistantIndex = session.history.push(assistantMsgObj) - 1;
+
+  const assistantEl = createMessageElement(assistantMsgObj, assistantIndex);
+  chatMessages.appendChild(assistantEl);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  const contentTarget = assistantEl.querySelector(".message-content p");
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: session.history.slice(0, -1),
+      }),
+    });
+
+    if (!response.ok) throw new Error("Failed to get response");
+    if (!response.body) throw new Error("Response body is null");
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullResponseText = "";
+    let buffer = "";
+
+    const flushText = () => {
+      contentTarget.innerHTML = escapeHtml(fullResponseText);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        processBuffer(buffer + "\n\n");
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const result = processBuffer(buffer);
+      buffer = result.buffer;
+    }
+
+    function processBuffer(inputBuffer) {
+      const parsed = consumeSseEvents(inputBuffer);
+      for (const data of parsed.events) {
+        if (data === "[DONE]") return { buffer: "" };
+        try {
+          const jsonData = JSON.parse(data);
+          let content = "";
+          if (jsonData.response) content = jsonData.response;
+          else if (jsonData.choices?.[0]?.delta?.content)
+            content = jsonData.choices[0].delta.content;
+
+          if (content) {
+            fullResponseText += content;
+            flushText();
+          }
+        } catch (e) {
+          /* ignore */
+        }
+      }
+      return { buffer: parsed.buffer };
+    }
+
+    session.history[assistantIndex].content = fullResponseText;
+    saveSessions();
+
+    // Final re-render to attach correct buttons to the finished message
+    renderMessages(session.history);
+  } catch (error) {
+    console.error("Error:", error);
+    session.history[assistantIndex].content = "Error processing request.";
+    renderMessages(session.history);
+  } finally {
+    typingIndicator.classList.remove("visible");
+    isProcessing = false;
+    userInput.disabled = false;
+    sendButton.disabled = false;
+    userInput.focus();
+  }
 }
 
 function consumeSseEvents(buffer) {
-	let normalized = buffer.replace(/\r/g, "");
-	const events = [];
-	let eventEndIndex;
-	while ((eventEndIndex = normalized.indexOf("\n\n")) !== -1) {
-		const rawEvent = normalized.slice(0, eventEndIndex);
-		normalized = normalized.slice(eventEndIndex + 2);
-
-		const lines = rawEvent.split("\n");
-		const dataLines = [];
-		for (const line of lines) {
-			if (line.startsWith("data:")) {
-				dataLines.push(line.slice("data:".length).trimStart());
-			}
-		}
-		if (dataLines.length === 0) continue;
-		events.push(dataLines.join("\n"));
-	}
-	return { events, buffer: normalized };
+  let normalized = buffer.replace(/\r/g, "");
+  const events = [];
+  let eventEndIndex;
+  while ((eventEndIndex = normalized.indexOf("\n\n")) !== -1) {
+    const rawEvent = normalized.slice(0, eventEndIndex);
+    normalized = normalized.slice(eventEndIndex + 2);
+    const lines = rawEvent.split("\n");
+    const dataLines = [];
+    for (const line of lines) {
+      if (line.startsWith("data:")) {
+        dataLines.push(line.slice("data:".length).trimStart());
+      }
+    }
+    if (dataLines.length > 0) events.push(dataLines.join("\n"));
+  }
+  return { events, buffer: normalized };
 }
+
+loadSessions();
