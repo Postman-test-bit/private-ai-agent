@@ -1,467 +1,562 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>SDET Studios AI</title>
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-		
-		<style>
-			:root {
-				/* Premium B&W Palette */
-				--bg-app: #050505;
-				--bg-sidebar: #000000;
-				--bg-surface: #0a0a0a;
-				--bg-surface-hover: #121212;
-				--bg-input: #0a0a0a;
-				
-				--border-subtle: #1f1f1f;
-				--border-strong: #333333;
-				
-				--text-primary: #ededed;
-				--text-secondary: #888888;
-				--text-tertiary: #555555;
-				
-				--accent: #ffffff;
-				--danger: #ff3333;
-				--success: #22c55e;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SDET Studios AI</title>
 
-				/* User vs AI Bubble Colors */
-				--msg-user-bg: #1a1a1a; 
-				--msg-ai-bg: transparent;
-				
-				--shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.5);
-			}
+    <link rel="icon" type="image/png" sizes="57x57" href="asset/icon.png" />
+    <link rel="icon" type="image/png" sizes="72x72" href="asset/icon.png" />
+    <link rel="icon" type="image/png" sizes="114x114" href="asset/icon.png" />
+    <link rel="icon" type="image/png" sizes="144x144" href="asset/icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="asset/icon.png" />
 
-			* {
-				box-sizing: border-box;
-				margin: 0;
-				padding: 0;
-			}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
 
-			body {
-				font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-				background: var(--bg-app);
-				color: var(--text-primary);
-				height: 100vh;
-				overflow: hidden;
-				-webkit-font-smoothing: antialiased;
-				font-size: 14px;
-			}
+    <style>
+      :root {
+        /* Premium B&W Palette */
+        --bg-app: #050505;
+        --bg-sidebar: #000000;
+        --bg-surface: #0a0a0a;
+        --bg-surface-hover: #121212;
+        --bg-input: #0a0a0a;
 
-			.app-container {
-				display: flex;
-				height: 100vh;
-				width: 100%;
-			}
+        --border-subtle: #1f1f1f;
+        --border-strong: #333333;
 
-			/* --- Sidebar --- */
-			.sidebar {
-				width: 260px;
-				background: var(--bg-sidebar);
-				border-right: 1px solid var(--border-subtle);
-				display: flex;
-				flex-direction: column;
-				flex-shrink: 0;
-			}
+        --text-primary: #ededed;
+        --text-secondary: #888888;
+        --text-tertiary: #555555;
 
-			.sidebar-header {
-				padding: 1.5rem 1rem;
-			}
+        --accent: #ffffff;
+        --danger: #ff3333;
+        --success: #22c55e;
 
-			.logo-section {
-				display: flex;
-				align-items: center;
-				gap: 0.75rem;
-				margin-bottom: 1.5rem;
-				padding-left: 0.5rem;
-			}
+        /* User vs AI Bubble Colors */
+        --msg-user-bg: #1a1a1a;
+        --msg-ai-bg: transparent;
+      }
 
-			.logo-icon {
-				width: 24px;
-				height: 24px;
-				background: var(--accent);
-				border-radius: 4px;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				color: var(--bg-sidebar);
-				font-weight: 800;
-				font-size: 14px;
-			}
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
-			.logo-text {
-				font-weight: 600;
-				font-size: 1rem;
-				letter-spacing: -0.01em;
-				color: var(--text-primary);
-			}
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+        background: var(--bg-app);
+        color: var(--text-primary);
+        height: 100vh;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+        font-size: 14px;
+      }
 
-			.new-chat-btn {
-				width: 100%;
-				padding: 0.75rem;
-				background: var(--text-primary);
-				color: var(--bg-sidebar);
-				border: 1px solid var(--text-primary);
-				border-radius: 6px;
-				cursor: pointer;
-				font-weight: 500;
-				font-size: 0.9rem;
-				transition: all 0.2s ease;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				gap: 8px;
-			}
+      .app-container {
+        display: flex;
+        height: 100vh;
+        width: 100%;
+      }
 
-			.new-chat-btn:hover {
-				background: transparent;
-				color: var(--text-primary);
-			}
+      /* --- Sidebar --- */
+      .sidebar {
+        width: 260px;
+        background: var(--bg-sidebar);
+        border-right: 1px solid var(--border-subtle);
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+      }
 
-			.chat-sessions {
-				flex: 1;
-				overflow-y: auto;
-				padding: 0 1rem 1rem 1rem;
-			}
+      .sidebar-header {
+        padding: 1.5rem 1rem;
+      }
 
-			/* Custom Scrollbar */
-			::-webkit-scrollbar { width: 6px; }
-			::-webkit-scrollbar-track { background: transparent; }
-			::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
-			::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+      .logo-section {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        padding-left: 0.5rem;
+      }
 
-			.chat-session-item {
-				padding: 0.6rem 0.8rem;
-				margin-bottom: 2px;
-				border-radius: 6px;
-				cursor: pointer;
-				color: var(--text-secondary);
-				font-size: 0.9rem;
-				transition: background 0.2s, color 0.2s;
-				white-space: nowrap;
-				overflow: hidden;
-				text-overflow: ellipsis;
-			}
+      .logo-image {
+        width: 32px;
+        height: 32px;
+        object-fit: contain;
+      }
 
-			.chat-session-item:hover {
-				background: var(--bg-surface-hover);
-				color: var(--text-primary);
-			}
+      .logo-text {
+        font-weight: 600;
+        font-size: 1rem;
+        letter-spacing: -0.01em;
+        color: var(--text-primary);
+      }
 
-			.chat-session-item.active {
-				background: var(--bg-surface);
-				color: var(--text-primary);
-				font-weight: 500;
-			}
+      .new-chat-btn {
+        width: 100%;
+        padding: 0.75rem;
+        background: var(--text-primary);
+        color: var(--bg-sidebar);
+        border: 1px solid var(--text-primary);
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
 
-			/* --- Main Chat Area --- */
-			.chat-container {
-				flex: 1;
-				display: flex;
-				flex-direction: column;
-				background: var(--bg-app);
-				position: relative;
-			}
+      .new-chat-btn:hover {
+        background: transparent;
+        color: var(--text-primary);
+      }
 
-			header {
-				padding: 1rem 2rem;
-				border-bottom: 1px solid var(--border-subtle);
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				background: rgba(5, 5, 5, 0.8);
-				backdrop-filter: blur(10px);
-				z-index: 10;
-			}
+      .chat-sessions {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 1rem 1rem 1rem;
+      }
 
-			.model-badge {
-				background: var(--bg-surface);
-				border: 1px solid var(--border-subtle);
-				padding: 4px 10px;
-				border-radius: 100px;
-				font-size: 0.75rem;
-				color: var(--text-secondary);
-				display: flex;
-				align-items: center;
-				gap: 6px;
-			}
-			
-			.model-badge::before {
-				content: '';
-				width: 6px;
-				height: 6px;
-				background: #22c55e;
-				border-radius: 50%;
-			}
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border-subtle);
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--border-strong);
+      }
 
-			.chat-messages {
-				flex: 1;
-				overflow-y: auto;
-				padding: 2rem 0;
-				display: flex;
-				flex-direction: column;
-				align-items: center;
-			}
+      .chat-session-item {
+        padding: 0.6rem 0.8rem;
+        margin-bottom: 2px;
+        border-radius: 6px;
+        cursor: pointer;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        transition: background 0.2s, color 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        group: session-item;
+      }
 
-			.message-wrapper {
-				width: 100%;
-				max-width: 800px;
-				padding: 0 1.5rem;
-				margin-bottom: 2rem; /* Increased spacing */
-				display: flex;
-				flex-direction: column;
-				position: relative;
-			}
-			
-			/* Only show actions on hover */
-			.message-wrapper:hover .message-actions {
-				opacity: 1;
-				pointer-events: auto;
-			}
+      .chat-session-item:hover {
+        background: var(--bg-surface-hover);
+        color: var(--text-primary);
+      }
 
-			.message-role {
-				font-size: 0.75rem;
-				font-weight: 600;
-				margin-bottom: 0.6rem;
-				color: var(--text-primary);
-				display: flex;
-				align-items: center;
-				gap: 8px;
-			}
+      .chat-session-item.active {
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        font-weight: 500;
+      }
 
-			.message-content {
-				line-height: 1.7;
-				font-size: 1rem;
-				color: var(--text-secondary);
-			}
+      .session-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+      }
 
-			.message-content p {
-				margin-bottom: 1rem;
-				white-space: pre-wrap;
-			}
-			
-			.message-content p:last-child {
-				margin-bottom: 0;
-			}
+      .delete-session-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        padding: 4px;
+        display: none; /* Hidden by default */
+        border-radius: 4px;
+        margin-left: 8px;
+      }
 
-			.user-message .message-content {
-				color: var(--text-primary);
-			}
+      .chat-session-item:hover .delete-session-btn {
+        display: flex;
+      }
 
-			/* Action Buttons Container */
-			.message-actions {
-				margin-top: 0.8rem;
-				display: flex;
-				gap: 6px;
-				opacity: 0; /* Hidden by default */
-				transition: opacity 0.2s ease;
-			}
+      .delete-session-btn:hover {
+        color: var(--danger);
+        background: rgba(255, 51, 51, 0.1);
+      }
 
-			.action-btn {
-				background: transparent;
-				border: none;
-				color: var(--text-secondary);
-				cursor: pointer;
-				padding: 4px;
-				border-radius: 4px;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				transition: all 0.2s;
-			}
+      /* --- Main Chat Area --- */
+      .chat-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-app);
+        position: relative;
+      }
 
-			.action-btn:hover {
-				background: var(--bg-surface-hover);
-				color: var(--text-primary);
-			}
-			
-			.action-btn.delete:hover {
-				color: var(--danger);
-				background: rgba(255, 51, 51, 0.1);
-			}
+      header {
+        padding: 1rem 2rem;
+        border-bottom: 1px solid var(--border-subtle);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(5, 5, 5, 0.8);
+        backdrop-filter: blur(10px);
+        z-index: 10;
+      }
 
-			/* Edit Mode */
-			.edit-textarea {
-				width: 100%;
-				background: var(--bg-surface);
-				border: 1px solid var(--border-strong);
-				color: var(--text-primary);
-				padding: 0.8rem;
-				border-radius: 6px;
-				font-family: inherit;
-				font-size: 1rem;
-				resize: vertical;
-				margin-bottom: 0.5rem;
-				outline: none;
-			}
-			
-			.edit-actions {
-				display: flex;
-				gap: 8px;
-				justify-content: flex-end;
-			}
-			
-			.save-btn, .cancel-btn {
-				padding: 6px 12px;
-				border-radius: 4px;
-				font-size: 0.85rem;
-				cursor: pointer;
-				font-weight: 500;
-				border: none;
-			}
-			
-			.save-btn {
-				background: var(--text-primary);
-				color: var(--bg-app);
-			}
-			
-			.cancel-btn {
-				background: transparent;
-				border: 1px solid var(--border-strong);
-				color: var(--text-primary);
-			}
+      .header-left {
+        display: flex;
+        flex-direction: column;
+      }
 
-			/* --- Input Area --- */
-			.input-area {
-				padding: 2rem 0;
-				display: flex;
-				justify-content: center;
-				background: linear-gradient(to top, var(--bg-app) 80%, transparent);
-			}
+      .model-badge {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        padding: 4px 10px;
+        border-radius: 100px;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: fit-content;
+      }
 
-			.input-container {
-				width: 100%;
-				max-width: 800px;
-				margin: 0 1.5rem;
-				position: relative;
-				background: var(--bg-input);
-				border: 1px solid var(--border-subtle);
-				border-radius: 12px;
-				transition: border-color 0.2s;
-				box-shadow: 0 0 0 1px transparent;
-			}
+      .model-badge::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        background: #22c55e;
+        border-radius: 50%;
+      }
 
-			.input-container:focus-within {
-				border-color: var(--border-strong);
-				box-shadow: 0 0 0 1px var(--border-strong);
-			}
+      .requests-counter {
+        font-size: 0.8rem;
+        color: var(--text-tertiary);
+        border: 1px solid var(--border-subtle);
+        padding: 6px 12px;
+        border-radius: 6px;
+        background: var(--bg-surface);
+      }
 
-			#user-input {
-				width: 100%;
-				background: transparent;
-				border: none;
-				color: var(--text-primary);
-				padding: 1rem 3rem 1rem 1rem; 
-				font-family: inherit;
-				font-size: 1rem;
-				resize: none;
-				max-height: 200px;
-				min-height: 56px;
-				outline: none;
-				line-height: 1.5;
-			}
+      .requests-counter span {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
 
-			#user-input::placeholder {
-				color: var(--text-tertiary);
-			}
+      .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 2rem 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
 
-			#send-button {
-				position: absolute;
-				bottom: 8px;
-				right: 8px;
-				background: var(--text-primary);
-				color: var(--bg-app);
-				border: none;
-				width: 32px;
-				height: 32px;
-				border-radius: 8px;
-				cursor: pointer;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				transition: opacity 0.2s;
-			}
+      .message-wrapper {
+        width: 100%;
+        max-width: 800px;
+        padding: 0 1.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
 
-			#send-button:disabled {
-				opacity: 0.5;
-				cursor: default;
-			}
+      .message-wrapper:hover .message-actions {
+        opacity: 1;
+        pointer-events: auto;
+      }
 
-			#typing-indicator {
-				height: 20px;
-				margin-bottom: 10px;
-				margin-left: 2rem;
-				color: var(--text-tertiary);
-				font-size: 0.8rem;
-				opacity: 0;
-				transition: opacity 0.3s;
-				text-align: center;
-				width: 100%;
-			}
-			
-			#typing-indicator.visible {
-				opacity: 1;
-			}
+      .message-role {
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 0.6rem;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
 
-			@media (max-width: 768px) {
-				.sidebar {
-					position: fixed;
-					left: -260px;
-					z-index: 100;
-					height: 100%;
-					transition: left 0.3s ease;
-				}
-				.sidebar.open { left: 0; }
-				.message-wrapper { padding: 0 1rem; }
-				.input-container { margin: 0 1rem; }
-			}
-		</style>
-	</head>
-	<body>
-		<div class="app-container">
-			<aside class="sidebar">
-				<div class="sidebar-header">
-					<div class="logo-section">
-						<div class="logo-icon">S</div>
-						<div class="logo-text">SDET Studios</div>
-					</div>
-					<button class="new-chat-btn" id="new-chat-btn">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-						New Chat
-					</button>
-				</div>
-				<div class="chat-sessions" id="chat-sessions"></div>
-			</aside>
+      .message-content {
+        line-height: 1.7;
+        font-size: 1rem;
+        color: var(--text-secondary);
+      }
 
-			<div class="chat-container">
-				<header>
-					<div style="font-weight: 600; font-size: 1.1rem;">Assistant</div>
-					<div class="model-badge">SDET-v1</div>
-				</header>
+      .message-content p {
+        margin-bottom: 1rem;
+        white-space: pre-wrap;
+      }
 
-				<div id="chat-messages" class="chat-messages"></div>
-				
-				<div id="typing-indicator">SDET AI is generating...</div>
+      .message-content p:last-child {
+        margin-bottom: 0;
+      }
 
-				<div class="input-area">
-					<div class="input-container">
-						<textarea
-							id="user-input"
-							placeholder="Type your message..."
-							rows="1"
-							autofocus
-						></textarea>
-						<button id="send-button">
-							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-						</button>
-					</div>
-				</div>
-			</div>
-		</div>
+      .user-message .message-content {
+        color: var(--text-primary);
+      }
 
-		<script src="chat.js"></script>
-	</body>
+      .message-actions {
+        margin-top: 0.8rem;
+        display: flex;
+        gap: 6px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+
+      .action-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+
+      .action-btn:hover {
+        background: var(--bg-surface-hover);
+        color: var(--text-primary);
+      }
+
+      .action-btn.delete:hover {
+        color: var(--danger);
+        background: rgba(255, 51, 51, 0.1);
+      }
+
+      .edit-textarea {
+        width: 100%;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-strong);
+        color: var(--text-primary);
+        padding: 0.8rem;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 1rem;
+        resize: vertical;
+        margin-bottom: 0.5rem;
+        outline: none;
+      }
+
+      .edit-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .save-btn,
+      .cancel-btn {
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        font-weight: 500;
+        border: none;
+      }
+
+      .save-btn {
+        background: var(--text-primary);
+        color: var(--bg-app);
+      }
+
+      .cancel-btn {
+        background: transparent;
+        border: 1px solid var(--border-strong);
+        color: var(--text-primary);
+      }
+
+      /* --- Input Area --- */
+      .input-area {
+        padding: 2rem 0;
+        display: flex;
+        justify-content: center;
+        background: linear-gradient(to top, var(--bg-app) 80%, transparent);
+      }
+
+      .input-container {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 1.5rem;
+        position: relative;
+        background: var(--bg-input);
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        transition: border-color 0.2s;
+        box-shadow: 0 0 0 1px transparent;
+      }
+
+      .input-container:focus-within {
+        border-color: var(--border-strong);
+        box-shadow: 0 0 0 1px var(--border-strong);
+      }
+
+      #user-input {
+        width: 100%;
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        padding: 1rem 3rem 1rem 1rem;
+        font-family: inherit;
+        font-size: 1rem;
+        resize: none;
+        max-height: 200px;
+        min-height: 56px;
+        outline: none;
+        line-height: 1.5;
+      }
+
+      #user-input::placeholder {
+        color: var(--text-tertiary);
+      }
+
+      #send-button {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        background: var(--text-primary);
+        color: var(--bg-app);
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.2s;
+      }
+
+      #send-button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+
+      #typing-indicator {
+        height: 20px;
+        margin-bottom: 10px;
+        margin-left: 2rem;
+        color: var(--text-tertiary);
+        font-size: 0.8rem;
+        opacity: 0;
+        transition: opacity 0.3s;
+        text-align: center;
+        width: 100%;
+      }
+
+      #typing-indicator.visible {
+        opacity: 1;
+      }
+
+      @media (max-width: 768px) {
+        .sidebar {
+          position: fixed;
+          left: -260px;
+          z-index: 100;
+          height: 100%;
+          transition: left 0.3s ease;
+        }
+        .sidebar.open {
+          left: 0;
+        }
+        .message-wrapper {
+          padding: 0 1rem;
+        }
+        .input-container {
+          margin: 0 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo-section">
+            <img src="asset/logo.png" alt="SDET Logo" class="logo-image" />
+            <div class="logo-text">SDET Studios</div>
+          </div>
+          <button class="new-chat-btn" id="new-chat-btn">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            New Chat
+          </button>
+        </div>
+        <div class="chat-sessions" id="chat-sessions"></div>
+      </aside>
+
+      <div class="chat-container">
+        <header>
+          <div class="header-left">
+            <div
+              style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px"
+            >
+              Assistant
+            </div>
+            <div class="model-badge">SDET-v1</div>
+          </div>
+          <div class="requests-counter">
+            Requests left: <span id="request-count">50</span>
+          </div>
+        </header>
+
+        <div id="chat-messages" class="chat-messages"></div>
+
+        <div id="typing-indicator">SDET AI is generating...</div>
+
+        <div class="input-area">
+          <div class="input-container">
+            <textarea
+              id="user-input"
+              placeholder="Type your message..."
+              rows="1"
+              autofocus
+            ></textarea>
+            <button id="send-button">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="12" y1="19" x2="12" y2="5"></line>
+                <polyline points="5 12 12 5 19 12"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="chat.js"></script>
+  </body>
 </html>

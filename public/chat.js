@@ -4,10 +4,12 @@ const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
 const chatSessionsContainer = document.getElementById("chat-sessions");
 const newChatBtn = document.getElementById("new-chat-btn");
+const requestCountEl = document.getElementById("request-count");
 
 let chatSessions = [];
 let currentSessionId = null;
 let isProcessing = false;
+let requestsLeft = 50; // Daily Limit
 
 // --- Icons ---
 const ICONS = {
@@ -55,14 +57,75 @@ function switchToSession(sessionId) {
   }, 0);
 }
 
+function deleteSession(e, sessionId) {
+  e.stopPropagation(); // Prevent triggering the session click
+  if (!confirm("Are you sure you want to delete this session?")) return;
+
+  chatSessions = chatSessions.filter((s) => s.id !== sessionId);
+  saveSessions();
+
+  if (chatSessions.length === 0) {
+    // If no sessions left, create a new one
+    const newId = createNewSession();
+    switchToSession(newId);
+  } else if (currentSessionId === sessionId) {
+    // If we deleted the active session, switch to the first available one
+    switchToSession(chatSessions[0].id);
+  } else {
+    // Just re-render list
+    renderSessions();
+  }
+}
+
+// --- Request Counter Logic ---
+function updateRequestCount() {
+  requestCountEl.textContent = requestsLeft;
+  localStorage.setItem("requestsLeft", requestsLeft);
+}
+
+function loadRequestCount() {
+  const saved = localStorage.getItem("requestsLeft");
+  if (saved) {
+    requestsLeft = parseInt(saved, 10);
+  }
+  updateRequestCount();
+}
+
 // --- Rendering Logic ---
+
+function renderSessions() {
+  chatSessionsContainer.innerHTML = "";
+  chatSessions.forEach((session) => {
+    const sessionEl = document.createElement("div");
+    sessionEl.className = "chat-session-item";
+    if (session.id === currentSessionId) {
+      sessionEl.classList.add("active");
+    }
+
+    // Title Span
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "session-title";
+    titleSpan.textContent = session.title;
+
+    // Delete Button
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-session-btn";
+    deleteBtn.innerHTML = ICONS.delete;
+    deleteBtn.title = "Delete Chat";
+    deleteBtn.addEventListener("click", (e) => deleteSession(e, session.id));
+
+    sessionEl.appendChild(titleSpan);
+    sessionEl.appendChild(deleteBtn);
+
+    sessionEl.addEventListener("click", () => switchToSession(session.id));
+    chatSessionsContainer.appendChild(sessionEl);
+  });
+}
 
 function renderMessages(history) {
   chatMessages.innerHTML = "";
   history.forEach((msg, index) => {
-    // Fix for "ghost" messages: Don't render empty messages unless it's the very last one (likely streaming)
     if (!msg.content && index !== history.length - 1) return;
-
     const msgEl = createMessageElement(msg, index);
     chatMessages.appendChild(msgEl);
   });
@@ -90,30 +153,33 @@ function createMessageElement(msg, index) {
   actionsDiv.className = "message-actions";
 
   if (msg.role === "user") {
-    // User Actions: Edit, Delete
     const editBtn = createBtn("edit", "Edit", () => enterEditMode(index));
     const deleteBtn = createBtn("delete", "Delete", () => deleteMessage(index));
     actionsDiv.appendChild(editBtn);
     actionsDiv.appendChild(deleteBtn);
   } else {
-    // AI Actions: Copy, Regenerate, Like, Dislike
-    const copyBtn = createBtn("copy", "Copy", () =>
-      copyToClipboard(msg.content)
-    );
-    const regenBtn = createBtn("regenerate", "Regenerate", () =>
-      regenerateMessage(index)
-    );
-    const likeBtn = createBtn("thumbUp", "Good response", () =>
-      console.log("Liked", index)
-    );
-    const dislikeBtn = createBtn("thumbDown", "Bad response", () =>
-      console.log("Disliked", index)
-    );
+    // Logic: If it's the very first message (Index 0) AND it's an assistant, DO NOT show actions.
+    const isGreeting = index === 0 && msg.role === "assistant";
 
-    actionsDiv.appendChild(copyBtn);
-    actionsDiv.appendChild(regenBtn);
-    actionsDiv.appendChild(likeBtn);
-    actionsDiv.appendChild(dislikeBtn);
+    if (!isGreeting) {
+      const copyBtn = createBtn("copy", "Copy", () =>
+        copyToClipboard(msg.content)
+      );
+      const regenBtn = createBtn("regenerate", "Regenerate", () =>
+        regenerateMessage(index)
+      );
+      const likeBtn = createBtn("thumbUp", "Good response", () =>
+        console.log("Liked", index)
+      );
+      const dislikeBtn = createBtn("thumbDown", "Bad response", () =>
+        console.log("Disliked", index)
+      );
+
+      actionsDiv.appendChild(copyBtn);
+      actionsDiv.appendChild(regenBtn);
+      actionsDiv.appendChild(likeBtn);
+      actionsDiv.appendChild(dislikeBtn);
+    }
   }
 
   wrapper.appendChild(roleHeader);
@@ -139,36 +205,32 @@ function deleteMessage(index) {
   if (!session) return;
 
   if (confirm("Delete this message?")) {
-    // Remove 1 item at index
     session.history.splice(index, 1);
     saveSessions();
-    // Complete re-render guarantees no "ghost" elements remain
     renderMessages(session.history);
   }
 }
 
 function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    // Optional: Show a small toast or tooltip
-    console.log("Copied to clipboard");
-  });
+  navigator.clipboard.writeText(text);
 }
 
 function regenerateMessage(index) {
   const session = chatSessions.find((s) => s.id === currentSessionId);
   if (!session || isProcessing) return;
 
-  // To regenerate, we need to resend the context up to the PREVIOUS message
-  // Usually, regeneration means "delete this AI response and try again"
+  // Decrement request count for regeneration as well
+  if (requestsLeft <= 0) {
+    alert("Daily limit reached.");
+    return;
+  }
+  requestsLeft--;
+  updateRequestCount();
 
-  // 1. Remove this AI message
   session.history.splice(index, 1);
   saveSessions();
   renderMessages(session.history);
 
-  // 2. Trigger fetch based on remaining history
-  // We don't have a specific "user prompt" here, we just re-run the thread
-  // So we invoke the API call logic directly
   streamResponse(session);
 }
 
@@ -179,7 +241,7 @@ function enterEditMode(index) {
   const wrapper = chatMessages.querySelector(
     `.message-wrapper[data-index="${index}"]`
   );
-  if (!wrapper) return; // Safety check
+  if (!wrapper) return;
 
   const contentDiv = wrapper.querySelector(".message-content");
   const actionsDiv = wrapper.querySelector(".message-actions");
@@ -226,11 +288,17 @@ function saveEdit(index, newContent) {
   const session = chatSessions.find((s) => s.id === currentSessionId);
   if (!session) return;
 
-  // Update content
+  if (requestsLeft <= 0) {
+    alert("Daily limit reached.");
+    renderMessages(session.history); // restore view
+    return;
+  }
+  requestsLeft--;
+  updateRequestCount();
+
   session.history[index].content = newContent;
 
-  // If user edits their message, usually we want to clear everything AFTER it and regenerate response
-  // Remove all history after this index
+  // Remove all history after this index to regenerate fresh
   const elementsToRemove = session.history.length - 1 - index;
   if (elementsToRemove > 0) {
     session.history.splice(index + 1, elementsToRemove);
@@ -239,25 +307,10 @@ function saveEdit(index, newContent) {
   saveSessions();
   renderMessages(session.history);
 
-  // Trigger new response
   streamResponse(session);
 }
 
 // --- Core App Logic ---
-
-function renderSessions() {
-  chatSessionsContainer.innerHTML = "";
-  chatSessions.forEach((session) => {
-    const sessionEl = document.createElement("div");
-    sessionEl.className = "chat-session-item";
-    if (session.id === currentSessionId) {
-      sessionEl.classList.add("active");
-    }
-    sessionEl.textContent = session.title;
-    sessionEl.addEventListener("click", () => switchToSession(session.id));
-    chatSessionsContainer.appendChild(sessionEl);
-  });
-}
 
 function saveSessions() {
   try {
@@ -337,8 +390,17 @@ async function sendMessage() {
   const message = userInput.value.trim();
   if (message === "" || isProcessing) return;
 
+  if (requestsLeft <= 0) {
+    alert("You have reached your daily request limit.");
+    return;
+  }
+
   const session = chatSessions.find((s) => s.id === currentSessionId);
   if (!session) return;
+
+  // Decrement Counter
+  requestsLeft--;
+  updateRequestCount();
 
   // 1. Add User Message
   const userMsgObj = { role: "user", content: message };
@@ -347,7 +409,6 @@ async function sendMessage() {
   userInput.value = "";
   userInput.style.height = "auto";
 
-  // Quick Render for User Message
   chatMessages.appendChild(
     createMessageElement(userMsgObj, session.history.length - 1)
   );
@@ -355,11 +416,9 @@ async function sendMessage() {
 
   updateSessionTitle(currentSessionId, message);
 
-  // 2. Start Stream
   streamResponse(session);
 }
 
-// Refactored streaming logic to be reusable (for regenerate/edit)
 async function streamResponse(session) {
   isProcessing = true;
   userInput.disabled = true;
@@ -433,8 +492,6 @@ async function streamResponse(session) {
 
     session.history[assistantIndex].content = fullResponseText;
     saveSessions();
-
-    // Final re-render to attach correct buttons to the finished message
     renderMessages(session.history);
   } catch (error) {
     console.error("Error:", error);
@@ -468,4 +525,6 @@ function consumeSseEvents(buffer) {
   return { events, buffer: normalized };
 }
 
+// Init
+loadRequestCount();
 loadSessions();
