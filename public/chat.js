@@ -660,10 +660,9 @@ async function streamResponse(session) {
         content: msg.content,
       }));
 
-      // Use hardcoded API key for OpenRouter models with localStorage as fallback
-      const apiKey =
-        localStorage.getItem("openrouter_api_key") ||
-        "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";
+      // TODO: Replace with your valid OpenRouter API key from https://openrouter.ai/keys
+      // The current key may be expired - get a new one if you see 401 errors
+      const apiKey = "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";
 
       response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
