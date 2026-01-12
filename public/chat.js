@@ -293,12 +293,8 @@ function createMessageElement(msg, index) {
       const regenBtn = createBtn("regenerate", "Regenerate", () =>
         regenerateMessage(index)
       );
-      const likeBtn = createBtn("thumbUp", "Good response", () =>
-        console.log("Liked", index)
-      );
-      const dislikeBtn = createBtn("thumbDown", "Bad response", () =>
-        console.log("Disliked", index)
-      );
+      const likeBtn = createBtn("thumbUp", "Good response", () => {});
+      const dislikeBtn = createBtn("thumbDown", "Bad response", () => {});
 
       actionsDiv.appendChild(copyBtn);
       actionsDiv.appendChild(regenBtn);
@@ -541,27 +537,7 @@ if (fileUploadBtn && fileInput) {
 // --- Message Sending & Streaming ---
 
 async function sendMessage() {
-  console.log("Send button clicked");
   const message = userInput.value.trim();
-  console.log(
-    "Message:",
-    message,
-    "Attached files:",
-    attachedFiles.length,
-    "isProcessing:",
-    isProcessing
-  );
-
-  // Allow sending if there's a message OR if there are attached files
-  if ((message === "" && attachedFiles.length === 0) || isProcessing) {
-    console.log("Blocked: Empty message and no files, or already processing");
-    return;
-  }
-
-  if (requestsLeft <= 0) {
-    alert("You have reached your daily request limit.");
-    return;
-  }
 
   const session = chatSessions.find((s) => s.id === currentSessionId);
   if (!session) return;
@@ -638,7 +614,7 @@ async function streamResponse(session) {
       // Use OpenRouter API for non-Cloudflare models
       // Map model sen to OlectiopenRouter model IDs
       let modelId;
-      switch(selectedModel) {
+      switch (selectedModel) {
         case "xiaomi-mimo":
           modelId = "xiaomi/mimo-v2-flash:free";
           break;
@@ -668,7 +644,7 @@ async function streamResponse(session) {
       }
 
       // Prepare messages (file content already included in msg.content)
-      // Filter out initial assistant greeting and gonverset cation history
+      // Filter out initial assistant greeting from conversation history
       let conversationHistory = session.history.slice(0, -1);
 
       // Remove initial assistant greeting if it's the first message
@@ -680,16 +656,20 @@ async function streamResponse(session) {
       }
 
       const formattedMessages = conversationHistory.map((msg) => ({
-        e: msg.role,
+        role: msg.role,
         content: msg.content,
       }));
+
+      // Use hardcoded API key for OpenRouter models with localStorage as fallback
+      const apiKey =
+        localStorage.getItem("openrouter_api_key") ||
+        "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";
 
       response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization:
-            "Bearer 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",
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: modelId,
@@ -724,7 +704,18 @@ async function streamResponse(session) {
       });
     }
 
-    if (!response.ok) throw new Error("Failed to get response");
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('API Key Invalid. Your OpenRouter API key is incorrect or expired. Get a new key at https://openrouter.ai/keys');
+      } else if (response.status === 429) {
+        throw new Error('Rate Limit Exceeded. Too many requests. Please wait and try again.');
+      } else if (response.status === 400) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Bad Request: ${errorData.error?.message || response.statusText}`);
+      } else {
+        throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+      }
+    }
     if (!response.body) throw new Error("Response body is null");
 
     const reader = response.body.getReader();
