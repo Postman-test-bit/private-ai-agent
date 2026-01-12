@@ -5,11 +5,18 @@ const typingIndicator = document.getElementById("typing-indicator");
 const chatSessionsContainer = document.getElementById("chat-sessions");
 const newChatBtn = document.getElementById("new-chat-btn");
 const requestCountEl = document.getElementById("request-count");
+const modelSelector = document.getElementById("model-selector");
+const fileInput = document.getElementById("file-input");
+const fileUploadBtn = document.getElementById("file-upload-btn");
+const attachedFilesDiv = document.getElementById("attached-files");
+const fileChipsContainer = document.getElementById("file-chips-container");
 
 let chatSessions = [];
 let currentSessionId = null;
 let isProcessing = false;
 let requestsLeft = 50; // Daily Limit
+let selectedModel = "sdet-v1"; // Default model
+let attachedFiles = [];
 
 // --- Markdown & Highlight Setup ---
 
@@ -204,16 +211,10 @@ function deleteSession(e, sessionId) {
 
 // --- Request Counter Logic ---
 function updateRequestCount() {
-  requestCountEl.textContent = requestsLeft;
-  localStorage.setItem("requestsLeft", requestsLeft);
-}
-
-function loadRequestCount() {
-  const saved = localStorage.getItem("requestsLeft");
-  if (saved) {
-    requestsLeft = parseInt(saved, 10);
+  if (requestCountEl) {
+    requestCountEl.textContent = requestsLeft;
   }
-  updateRequestCount();
+  localStorage.setItem("requestsLeft", requestsLeft);
 }
 
 // --- Rendering Logic ---
@@ -507,11 +508,36 @@ newChatBtn.addEventListener("click", () => {
   switchToSession(newSessionId);
 });
 
+modelSelector.addEventListener("change", (e) => {
+  selectedModel = e.target.value;
+  localStorage.setItem("selectedModel", selectedModel);
+});
+
+fileUploadBtn.addEventListener("click", () => {
+  fileInput.click();
+});
+
+fileInput.addEventListener("change", handleFileUpload);
+
 // --- Message Sending & Streaming ---
 
 async function sendMessage() {
+  console.log("Send button clicked");
   const message = userInput.value.trim();
-  if (message === "" || isProcessing) return;
+  console.log(
+    "Message:",
+    message,
+    "Attached files:",
+    attachedFiles.length,
+    "isProcessing:",
+    isProcessing
+  );
+
+  // Allow sending if there's a message OR if there are attached files
+  if ((message === "" && attachedFiles.length === 0) || isProcessing) {
+    console.log("Blocked: Empty message and no files, or already processing");
+    return;
+  }
 
   if (requestsLeft <= 0) {
     alert("You have reached your daily request limit.");
@@ -524,11 +550,42 @@ async function sendMessage() {
   requestsLeft--;
   updateRequestCount();
 
-  const userMsgObj = { role: "user", content: message };
+  // Prepare message with files if any
+  let messageContent = message;
+  const filesData = [...attachedFiles]; // Copy files for this message
+
+  if (filesData.length > 0) {
+    // Add user message if exists
+    if (messageContent) {
+      messageContent += "\n\n";
+    }
+
+    // Add file contents
+    messageContent += "=== ATTACHED FILES ===\n\n";
+    filesData.forEach((file) => {
+      messageContent += `--- File: ${file.name} ---\n`;
+      if (file.content && file.content !== `[Binary file: ${file.name}]`) {
+        messageContent += file.content;
+      } else {
+        messageContent += `[Binary file - content not extracted]`;
+      }
+      messageContent += `\n\n`;
+    });
+    messageContent += "=== END OF FILES ===";
+  }
+
+  const userMsgObj = {
+    role: "user",
+    content: messageContent,
+    files: filesData, // Store files with message
+  };
   session.history.push(userMsgObj);
 
   userInput.value = "";
   userInput.style.height = "auto";
+
+  // Clear attached files after sending
+  clearAttachedFiles();
 
   chatMessages.appendChild(
     createMessageElement(userMsgObj, session.history.length - 1)
@@ -556,13 +613,97 @@ async function streamResponse(session) {
   const contentTarget = assistantEl.querySelector(".message-content");
 
   try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: session.history.slice(0, -1),
-      }),
-    });
+    let response;
+
+    if (selectedModel !== "sdet-v1") {
+      // Use OpenRouter API for non-Cloudflare models
+      // Map model sen to OlectiopenRouter model IDs
+      let modelId;
+      switch(selectedModel) {
+        case "xiaomi-mimo":
+          modelId = "xiaomi/mimo-v2-flash:free";
+          break;
+        case "gpt-oss-120b":
+          modelId = "openai/gpt-oss-120b:free";
+          break;
+        case "llama-3.3-70b":
+          modelId = "meta-llama/llama-3.3-70b-instruct:free";
+          break;
+        case "molmo-2-8b":
+          modelId = "allenai/molmo-2-8b:free";
+          break;
+        case "seedream-4.5":
+          modelId = "bytedance-seed/seedream-4.5";
+          break;
+        case "nemotron-3-nano":
+          modelId = "nvidia/nemotron-3-nano-30b-a3b:free";
+          break;
+        case "devstral-2512":
+          modelId = "mistralai/devstral-2512:free";
+          break;
+        case "riverflow-v2":
+          modelId = "sourceful/riverflow-v2-max-preview";
+          break;
+        default:
+          modelId = "xiaomi/mimo-v2-flash:free";
+      }
+
+      // Prepare messages (file content already included in msg.content)
+      // Filter out initial assistant greeting and gonverset cation history
+      let conversationHistory = session.history.slice(0, -1);
+
+      // Remove initial assistant greeting if it's the first message
+      if (
+        conversationHistory.length > 0 &&
+        conversationHistory[0].role === "assistant"
+      ) {
+        conversationHistory = conversationHistory.slice(1);
+      }
+
+      const formattedMessages = conversationHistory.map((msg) => ({
+        e: msg.role,
+        content: msg.content,
+      }));
+
+      response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            "Bearer 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",
+        },
+        body: JSON.stringify({
+          model: modelId,
+          messages: formattedMessages,
+          stream: true,
+        }),
+      });
+    } else {
+      // Use default Cloudflare Workers AI
+      // Prepare messages (file content already included in msg.content)
+      let conversationHistory = session.history.slice(0, -1);
+
+      // Remove initial assistant greeting if it's the first message
+      if (
+        conversationHistory.length > 0 &&
+        conversationHistory[0].role === "assistant"
+      ) {
+        conversationHistory = conversationHistory.slice(1);
+      }
+
+      const formattedMessages = conversationHistory.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
+      response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: formattedMessages,
+        }),
+      });
+    }
 
     if (!response.ok) throw new Error("Failed to get response");
     if (!response.body) throw new Error("Response body is null");
@@ -645,6 +786,228 @@ function consumeSseEvents(buffer) {
   return { events, buffer: normalized };
 }
 
+// --- File Upload Logic ---
+
+function getFileIcon(filename) {
+  const ext = filename.split(".").pop().toLowerCase();
+  const iconMap = {
+    js: "https://cdn-icons-png.flaticon.com/128/5968/5968292.png",
+    ts: "https://cdn-icons-png.flaticon.com/128/5968/5968381.png",
+    py: "https://cdn-icons-png.flaticon.com/128/5968/5968350.png",
+    pdf: "https://cdn-icons-png.flaticon.com/128/337/337946.png",
+    doc: "https://cdn-icons-png.flaticon.com/128/281/281760.png",
+    jpg: "https://cdn-icons-png.flaticon.com/128/337/337948.png",
+    png: "https://cdn-icons-png.flaticon.com/128/337/337948.png",
+  };
+  return (
+    iconMap[ext] || "https://cdn-icons-png.flaticon.com/128/3767/3767084.png"
+  );
+}
+
+function convertFileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function extractFileContent(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => resolve("[Error reading file]");
+
+    const textTypes = [
+      ".txt",
+      ".js",
+      ".ts",
+      ".py",
+      ".java",
+      ".c",
+      ".cpp",
+      ".html",
+      ".css",
+      ".json",
+      ".xml",
+      ".md",
+      ".csv",
+    ];
+    const isTextFile = textTypes.some((ext) =>
+      file.name.toLowerCase().endsWith(ext)
+    );
+
+    if (isTextFile || file.type.startsWith("text/")) {
+      reader.readAsText(file);
+    } else {
+      resolve(`[Binary file: ${file.name}]`);
+    }
+  });
+}
+
+async function handleFileUpload(event) {
+  const files = Array.from(event.target.files || []);
+  if (files.length === 0) return;
+
+  // Validate file sizes - Applied uniformly to ALL models
+  // Model context windows:
+  //   Text Models:
+  //   - Xiaomi Mimo-v2: 200k tokens
+  //   - GPT OSS 120B: 131k tokens
+  //   - Llama 3.3 70B: 128k tokens
+  //   - Devstral 2 (Code): 262k tokens
+  //   - Nemotron 3 Nano (Agent): 256k tokens
+  //   Vision/Multimodal:
+  //   - Molmo2 8B: 37k tokens (vision+video)
+  //   Image Generation:
+  //   - Seedream 4.5: 4k tokens (text-to-image)
+  //   - Riverflow V2: 8k tokens (text/image-to-image)
+  //   - SDET-v1 (Cloudflare): Varies
+  //
+  // Conservative limits to work with all models:
+  const MAX_SIZE = 10 * 1024 * 1024; // 10MB total for all attached files
+  const MAX_SINGLE_FILE = 5 * 1024 * 1024; // 5MB maximum per individual file
+
+  // Check individual file sizes
+  for (const file of files) {
+    if (file.size > MAX_SINGLE_FILE) {
+      alert(
+        `File "${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(
+          2
+        )}MB). Maximum file size is 5MB.`
+      );
+      fileInput.value = "";
+      return;
+    }
+  }
+
+  // Check current total + new files
+  const currentTotal = attachedFiles.reduce((sum, f) => sum + f.size, 0);
+  const newFilesTotal = files.reduce((sum, f) => sum + f.size, 0);
+  const combinedTotal = currentTotal + newFilesTotal;
+
+  if (combinedTotal > MAX_SIZE) {
+    alert(
+      `Total file size would exceed 10MB limit.\nCurrent: ${(
+        currentTotal /
+        1024 /
+        1024
+      ).toFixed(2)}MB\nNew files: ${(newFilesTotal / 1024 / 1024).toFixed(
+        2
+      )}MB\nTotal: ${(combinedTotal / 1024 / 1024).toFixed(2)}MB`
+    );
+    fileInput.value = "";
+    return;
+  }
+
+  // Show loading state
+  fileUploadBtn.disabled = true;
+  fileUploadBtn.style.opacity = "0.5";
+  fileUploadBtn.title = "Uploading...";
+
+  // Show chips container with loading message
+  fileChipsContainer.classList.remove("hidden");
+  attachedFilesDiv.innerHTML =
+    '<div style="padding: 8px; color: var(--text-secondary); font-size: 0.875rem;">📤 Uploading ' +
+    files.length +
+    " file(s)...</div>";
+
+  let successCount = 0;
+
+  for (const file of files) {
+    try {
+      const content = await extractFileContent(file);
+      const base64 = await convertFileToBase64(file);
+      attachedFiles.push({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        base64: base64,
+        content: content,
+      });
+      successCount++;
+    } catch (error) {
+      console.error("Error reading file:", error);
+      alert(`Failed to read file: ${file.name}`);
+    }
+  }
+
+  // Re-enable button
+  fileUploadBtn.disabled = false;
+  fileUploadBtn.style.opacity = "1";
+  fileUploadBtn.title = "";
+
+  // Show success message briefly before rendering chips
+  if (successCount > 0) {
+    attachedFilesDiv.innerHTML =
+      '<div style="padding: 8px; color: var(--success, #10b981); font-size: 0.875rem;">✓ ' +
+      successCount +
+      " file(s) uploaded</div>";
+    setTimeout(() => {
+      renderAttachedFiles();
+    }, 800);
+  } else {
+    fileChipsContainer.classList.add("hidden");
+  }
+
+  fileInput.value = "";
+}
+
+function renderAttachedFiles() {
+  attachedFilesDiv.innerHTML = "";
+
+  if (attachedFiles.length > 0) {
+    fileChipsContainer.classList.remove("hidden");
+
+    attachedFiles.forEach((file, index) => {
+      const chip = document.createElement("div");
+      chip.className = "file-chip";
+
+      const fileIcon = document.createElement("img");
+      fileIcon.src = getFileIcon(file.name);
+      fileIcon.style.width = "16px";
+      fileIcon.style.height = "16px";
+      fileIcon.style.objectFit = "contain";
+      fileIcon.style.marginRight = "6px";
+
+      const fileName = document.createElement("span");
+      fileName.textContent = file.name;
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "file-chip-remove";
+      removeBtn.innerHTML = "×";
+      removeBtn.onclick = () => removeFile(index);
+
+      chip.appendChild(fileIcon);
+      chip.appendChild(fileName);
+      chip.appendChild(removeBtn);
+      attachedFilesDiv.appendChild(chip);
+    });
+  } else {
+    fileChipsContainer.classList.add("hidden");
+  }
+}
+
+function removeFile(index) {
+  attachedFiles.splice(index, 1);
+  renderAttachedFiles();
+}
+
+function clearAttachedFiles() {
+  attachedFiles = [];
+  renderAttachedFiles();
+}
+
 // Init
-loadRequestCount();
+
 loadSessions();
+
+// Load saved model selection
+const savedModel = localStorage.getItem("selectedModel");
+if (savedModel) {
+  selectedModel = savedModel;
+  modelSelector.value = savedModel;
+}
+
+

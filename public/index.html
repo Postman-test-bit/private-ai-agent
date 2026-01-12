@@ -41,7 +41,7 @@
 
         --accent: #ffffff;
         --danger: #ff3333;
-        --success: #22c55e;
+        --success: #10b981;
 
         /* User vs AI Bubble Colors */
         --msg-user-bg: #1a1a1a;
@@ -212,11 +212,39 @@
         padding: 1rem 2rem;
         border-bottom: 1px solid var(--border-subtle);
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
         background: rgba(5, 5, 5, 0.8);
         backdrop-filter: blur(10px);
         z-index: 10;
+      }
+
+      .header-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .model-selector-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: 10px;
+        padding: 10px 16px;
+        transition: all 0.2s;
+      }
+
+      .model-selector-wrapper:hover {
+        border-color: var(--border-strong);
+        background: var(--bg-input);
+      }
+
+      .model-icon {
+        opacity: 0.7;
+        flex-shrink: 0;
       }
 
       .header-left {
@@ -243,6 +271,27 @@
         height: 6px;
         background: #22c55e;
         border-radius: 50%;
+      }
+
+      .model-selector {
+        background: transparent;
+        color: var(--text-primary);
+        border: none;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        outline: none;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        padding-right: 24px;
+        min-width: 180px;
+      }
+
+      .model-selector option {
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        padding: 8px;
       }
 
       .requests-counter {
@@ -508,9 +557,144 @@
         box-shadow: 0 0 0 1px transparent;
       }
 
+      .file-upload-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+
+      .file-upload-btn {
+        background: transparent;
+        border: 1px solid var(--border-subtle);
+        color: var(--text-secondary);
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+      }
+
+      .file-upload-btn:hover:not(:disabled) {
+        border-color: var(--border-strong);
+        color: var(--text-primary);
+      }
+
+      .file-upload-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .attached-files {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        flex: 1;
+      }
+
+      .file-chip {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-primary);
+      }
+
+      .file-chip-remove {
+        background: transparent;
+        border: none;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+      }
+
+      .file-chip-remove:hover {
+        color: var(--danger);
+      }
+
+      #file-input {
+        display: none;
+      }
+
       .input-container:focus-within {
         border-color: var(--border-strong);
         box-shadow: 0 0 0 1px var(--border-strong);
+      }
+
+      .file-upload-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+
+      .file-upload-wrapper.hidden {
+        display: none;
+      }
+
+      .file-upload-btn {
+        background: transparent;
+        border: 1px solid var(--border-subtle);
+        color: var(--text-secondary);
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+        flex-shrink: 0;
+      }
+
+      .file-upload-btn:hover {
+        border-color: var(--border-strong);
+        color: var(--text-primary);
+      }
+
+      .attached-files {
+    display    : flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        flex: 1;
+      }
+
+      .file-chip {
+        background: var(--bg-surface);
+        border: 1olid var(--bpx sorder-subtle);
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-primary);
+      }
+
+      .file-chip-re
+move {        background: transparent;
+        border: none;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        font-size: 0.85rem;
+      }
+
+      .file-chip-remove:hover {
+        color: var(--danger);
       }
 
       #user-input {
@@ -547,6 +731,7 @@
         align-items: center;
         justify-content: center;
         transition: opacity 0.2s;
+        z-index: 2;
       }
 
       #send-button:disabled {
@@ -619,17 +804,29 @@
       </aside>
 
       <div class="chat-container">
-        <header>
-          <div class="header-left">
-            <div
-              style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px"
-            >
-              Assistant
+        <header class="chat-header">
+          <div class="header-content">
+            <div class="model-selector-wrapper">
+              <s="1vg width8" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"necap="round" stroke stroke-li-linejoin="round" class="model-icon">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <select id="model-selector" class="model-selector">
+                <option value="sdet-v1">SDET-v1 [Text]</option>
+                <option value="xiaomi-mimo">Xiaomi Mimo-v2 [Text]</option>
+                <option value="gpt-oss-120b">GPT OSS 120B [Text]</option>
+                <option value="llama-3.3-70b">Llama 3.3 70B [Text]</option>
+                <option value="molmo-2-8b">Molmo2 8B [Vision+Video]</option>
+                <option value="seedream-4.5">Seedream 4.5 [Image Gen]</option>
+                <option value="nemotron-3-nano">Nemotron 3 Nano [Agent]</option>
+                <option value="devstral-2512">Devstral 2 [Code]</option>
+                <option value="riverflow-v2">Riverflow V2 [Image Gen]</option>
+              </select>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" styleacit="opy: 0.5; pointer-events: none;">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
             </div>
-            <div class="model-badge">SDET-v1</div>
-          </div>
-          <div class="requests-counter">
-            Requests left: <span id="request-count">50</span>
           </div>
         </header>
 
@@ -639,11 +836,21 @@
 
         <div class="input-area">
           <div class="input-container">
+            <div class="file-upload-wrapper hidden" id="file-chips-container">
+              <div class="attached-files" id="attached-files"></div>
+            </div>
+            <inpfile" ut type="id="file-input" multiple title="Max: 5MB per file, 10MB total" />
+            <button class="file-upload-btn" id="file-upload-btn" style="position: absolute; bottom: 8px; left: 8px; background: transparent; border: 1px solid var(--border-subtle); width: 32px; height: 32px; padding: 0; border-radius: 8px; z-index: 1; display: flex; align-items: center; justify-content: center;" title="Attach files (Max: 5MB per file, 10MB total)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+              </svg>
+            </button>
             <textarea
               id="user-input"
               placeholder="Type your message..."
-              rows="1"
-              autofocus
+              rows="1"     
+         autofocus
+              style="padding-left: 3rem;"
             ></textarea>
             <button id="send-button">
               <svg

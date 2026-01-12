@@ -1,153 +1,404 @@
-# LLM Chat Application Template
+# Private AI Agent
 
-A simple, ready-to-deploy chat application template powered by Cloudflare Workers AI. This template provides a clean starting point for building AI chat applications with streaming responses.
+A powerful multi-model AI chat application with file upload capabilities, supporting 9+ AI models from Cloudflare and OpenRouter. Built for developers who need flexible AI interactions with code analysis, vision processing, and image generation.
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/llm-chat-app-template)
+![AI Models](https://img.shields.io/badge/AI-9%2B%20Models-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![TypeScript](https://img.shields.io/badge/TypeScript-Workers-orange)
 
-<!-- dash-content-start -->
+## ✨ Features
 
-## Demo
+### 🤖 Multiple AI Modlable)
+ls (9 Avain**Text Generation Models:**
+- SDET-v1 (Cloudflare Workers AI)
+- Xiaomi Mimo-v2 (200k context)
+- GPT OSS 120B (131k context)
+- Llama 3.3 70B (128k context)
 
-This template demonstrates how to build an AI-powered chat interface using Cloudflare Workers AI with streaming responses. It features:
+**Specialized Models:**
+- **Devstral 2** - Coding specialist with 262k context window
+- **Nemotron 3 Nano** - Agentic AI with 256k context
+- **Molmo2 8B** - Vision & video understanding
 
-- Real-time streaming of AI responses using Server-Sent Events (SSE)
-- Easy customization of models and system prompts
-- Support for AI Gateway integration
-- Clean, responsive UI that works on mobile and desktop
+**Image Generation:**
+- **Seedream 4.5** - Text-to-image generation
+- **Riverflow V2** - Text/image-to-image generation
 
-## Features
+### 📁 Smart File Upload System
+- ✅ Multi-file upload support
+- ✅ Max 5MB per file, 10MB total
+- ✅ Automatic text extraction (.js, .ts, .py, .java, .html, .css, .json, .md, etc.)
+- ✅ Ftype iile cons (JavaScript, Python, PDF, images, etc.)
+- ✅ Real-time upload progress
+- ✅ File content included in AI context
+- ✅ Binary file detection
 
-- 💬 Simple and responsive chat interface
-- ⚡ Server-Sent Events (SSE) for streaming responses
-- 🧠 Powered by Cloudflare Workers AI LLMs
-- 🛠️ Built with TypeScript and Cloudflare Workers
-- 📱 Mobile-friendly design
-- 🔄 Maintains chat history on the client
-- 🔎 Built-in Observability logging
-<!-- dash-content-end -->
+### 💬 Advanced Chat Interface
+- 🗨️ Multiple chat sessions
+- 💾 Persistent chat history (localStorage)
+- ⚡ Real-time streaming responn- 🎨 Code synses (SSE)	ax highlighting (Marked.js)
+- 🌓 Modern dark theme
+- 📱 Mobile-responsive design
+- 🔄 Session management (create, switch, delete)
 
-## Getting Started
+### 🔧 Developer Features
+- 🚀 Zero-framework vanilla JavaScript frontend
+- 📘 TypeScript backend with Cloudflare Workers
+- 🔌 OpenRouter API integration
+- 🎯 Easy model switching
+- 📊 File size validation
+- 🔍 Debug logging
+- 🎨 Clean, maintainable code
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18 or newer)
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
-- A Cloudflare account with Workers AI access
+- [Node.js](https://nodejs.org/) v18 or newer
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) (Cloudflare Workers)
+- Cloudflare account with Workers AI access
+- [OpenRouter API Key](https://openrouter.ai/) (for non-Cloudflare models)
 
 ### Installation
 
-1. Clone this repository:
+1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/cloudflare/templates.git
-   cd templates/llm-chat-app
+   git clone <your-repo-url>
+   cd private-ai-agent
    ```
 
-2. Install dependencies:
+2. **Install dependencies:**
 
    ```bash
    npm install
    ```
 
-3. Generate Worker type definitions:
+3. **Configure API Keys:**
+
+   Update the OpenRouter API key in `public/chat.js`:
+   ```javascript
+   Authorization: "Bearer YOUR_OPENROUTER_API_KEY"
+   ```
+
+4. **Generate TypeScript definitions:**
+
    ```bash
    npm run cf-typegen
    ```
 
 ### Development
 
-Start a local development server:
+**Start the development server:**
 
 ```bash
 npm run dev
 ```
 
-This will start a local server at http://localhost:8787.
+The application will be available at: `http://localhost:8787`
 
-Note: Using Workers AI accesses your Cloudflare account even during local development, which will incur usage charges.
+**Note:** Workers AI uses your Cloudflare account even in local development, which may incur charges.
 
 ### Deployment
 
-Deploy to Cloudflare Workers:
+**Deploy to Cloudflare Workers:**
 
 ```bash
 npm run deploy
 ```
 
-### Monitor
+Your application will be deployed to: `https://your-worker-name.workers.dev`
 
-View real-time logs associated with any deployed Worker:
+### Monitoring
+
+**View real-time logs:**
 
 ```bash
-npm wrangler tail
+npm run tail
+# or
+npx wrangler tail
 ```
 
-## Project Structure
+**Check deployment status:**
+
+```bash
+npx wrangler deployments list
+```
+
+## 📂 Project Structure
 
 ```
-/
-├── public/             # Static assets
-│   ├── index.html      # Chat UI HTML
-│   └── chat.js         # Chat UI frontend script
+private-ai-agent/
+├── public/                 # Frontend assets
+│   ├── index.html        # Main chat UI
+│   └── chat.js           # Chat logic & API calls
+│                       # - Session management
+│                       # - File upload handling
+│                       # - Streaming responses
+│                       # - Model switching
 ├── src/
-│   ├── index.ts        # Main Worker entry point
-│   └── types.ts        # TypeScript type definitions
-├── test/               # Test files
-├── wrangler.jsonc      # Cloudflare Worker configuration
-├── tsconfig.json       # TypeScript configuration
-└── README.md           # This documentation
+│   ├── index.ts          # Cloudflare Worker entry
+│   └── types.ts          # TypeScript definitions
+├── test/                   # Test files
+├── wrangler.jsonc          # Worker configuration
+├── tsconfig.json           # TypeScript config
+├── package.json            # Dependencies
+└── README.md               # Documentation
 ```
 
-## How It Works
+## 🏗️ Architecture
 
-### Backend
+### Backend (Cloudflare Worker)
 
-The backend is built with Cloudflare Workers and uses the Workers AI platform to generate responses. The main components are:
+**File: `src**/index.ts`
 
-1. **API Endpoint** (`/api/chat`): Accepts POST requests with chat messages and streams responses
-2. **Streaming**: Uses Server-Sent Events (SSE) for real-time streaming of AI responses
-3. **Workers AI Binding**: Connects to Cloudflare's AI service via the Workers AI binding
+- ✅ Handles `/api/chat` POST requests
+- ✅ Streams AI responses using Server-Sent Events (SSE)
+- ✅ Integrates with CloudflareI
+- ✅ CO Workers ARS-enabled for local development
+- ✅ TypeScript for type safety
 
-### Frontend
+**Flow:**
+```
+Client Request → Worker → Workers AI → Stream Response → Client
+```
 
-The frontend is a simple HTML/CSS/JavaScript application that:
+### Frontend (VanilavaScript)
+la J
+**Files:** `public/index.html`, `public/chat.js`
 
-1. Presents a chat interface
-2. Sends user messages to the API
-3. Processes streaming responses in real-time
-4. Maintains chat history on the client side
+#### Key Components:
 
-## Customization
+**1. Session Management**
+- Multiple chat sessions stored in localStorage
+- Create, switch, and delete sessions
+- Persistent chat history across page reloads
 
-### Changing the Model
+**2. File Upload System**
+```javascript
+File Selection → Size Validation → Text Extraction → Attach to Message
+```
+- Validates file sizes (5MB/file, 10MB total)
+- Extracts text from code files
+- Displays file icons by type
+- Shows upload progress
 
-To use a different AI model, update the `MODEL_ID` constant in `src/index.ts`. You can find available models in the [Cloudflare Workers AI documentation](https://developers.cloudflare.com/workers-ai/models/).
+**3. AI Model Routing**
+- **Cloudflare Models:** `SDET-v1` → `/api/chat` endpoint
+- **OpenRouter Models:** All others → `https://openrouter.ai/api/v1/chat/completions`
+- Dynamic model ID mapping
+- Seodel switamless mching
 
-### Using AI Gateway
+**4. Streaming Response Handler**
+- Processes SSE streams
+- Real-time markdown rendering
+- Code syntax highlighting (Marked.js)
+- Typing indicators
 
-The template includes commented code for AI Gateway integration, which provides additional capabilities like rate limiting, caching, and analytics.
+## ⚙️ Configuration
 
-To enable AI Gateway:
+### Adding New AI Models
 
-1. [Create an AI Gateway](https://dash.cloudflare.com/?to=/:account/ai/ai-gateway) in your Cloudflare dashboard
-2. Uncomment the gateway configuration in `src/index.ts`
-3. Replace `YOUR_GATEWAY_ID` with your actual AI Gateway ID
-4. Configure other gateway options as needed:
-   - `skipCache`: Set to `true` to bypass gateway caching
-   - `cacheTtl`: Set the cache time-to-live in seconds
+**1. Add model option to HTML:**
 
-Learn more about [AI Gateway](https://developers.cloudflare.com/ai-gateway/).
+```html
+<!-- File: publicml -->
+<select/index.ht id="model-selector">
+  <option value="your-model-id">Model Name [Badge]</option>
+</select>
+```
 
-### Modifying the System Prompt
+**2. Add model ID mapping:**
 
-The default system prompt can be changed by updating the `SYSTEM_PROMPT` constant in `src/index.ts`.
+```javascript
+// File: public/chat.js
+switch(selectedModel) {
+  case "your-model-id":
+    modelId = "provider/model-name:variant";
+    break;
+}
+```
 
-### Styling
+### Changing File Size Limits
 
-The UI styling is contained in the `<style>` section of `public/index.html`. You can modify the CSS variables at the top to quickly change the color scheme.
+```javascript
+// File: public/chat.js, line ~835
+const MAX_SIZE =24 * 1024; // 10 10 * 10MB total
+const MAX_SINGLE_FILE = 5 * 1024 * 1024; // 5MB per file
+```
 
-## Resources
+### Customizing System Prompt (Cloudflare Models)
 
+```typescript
+// File: src/index.ts
+const SYSTEM_PROMPT = "Your custom system prompt here";
+```
+
+### Modifying Color Theme
+
+```html
+<!-- File: public/index.html -->
+<style>
+  :root {
+    --bg-app: #0a0a0a;
+    --bg-surface: #18181b;
+    --text-primary: #fafafa;
+    /* ... modify colors here ... */
+  }
+</style>
+```
+
+### Supported File Types for Text Extraction
+
+```javascript
+// File: public/chat.js
+const textTypes = [
+  '.txt', '.js', '.ts', '.py', '.java',
+  '.c', '.cpp', '.html', '.css', '.json',
+  '.xml', '.md', '.csv', '.log', '.yml'
+];
+```
+
+Add more extensions as needed for  case.
+
+## 📚 API Usage Examples
+
+### Sending a Message with Files
+
+```javascript
+const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_API_KEY'
+  },
+  body: JSON.stringify({
+    model: 'xiaomi/mimo-v2-flash:free',
+    messages: [
+      {
+        role: 'user',
+        content: nalyze `Athis code\n\n=== ATTACHED FILES ===\n--- File: script.js ---\n${fileConten OF FILES t}\n=== END===`
+      }
+    ],
+    stream: true
+  })
+});
+```
+
+### Processing Streaming Response
+
+```javascript
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  
+  const chunk = decoder.decode(value);
+  const lines = chunk.split('\n').filter(line => line.trim());
+  
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      const json = JSON.parse(line.slice(6));
+      const content = json.choices[0]?.delta?.content;
+      if (content) console.log(content);
+    }
+  }
+}
+```
+
+## ⚠️ Troubleshooting
+
+### File Upload Not Working
+
+**Issue:** Send button doesn't respond after attaching files
+
+**Solutions:**
+- Check console for errors (F12)
+- Verify file size < 5MB per file, < 10MB totn- Ensal filurare suppoe types rted
+- Check network tab for failed requests
+
+### 400 Bad Request Error
+
+**Issue:** API returns 400 error
+
+**Causes:**
+- Invalid API key
+- Model ID typo
+- Conversation starting with assistant message
+- Unsupported parameters for specific model
+
+**Fix:**
+```javascript
+// Remove initial assistant greeting before sending to API
+let conversationHistory = session.history.slice(0, -1);
+if (conversationHistory[0]?.role === 'assistant') {
+  conversationHistory = conversationHistory.slice(1);
+}
+```
+
+### Streaming Response Not Appearing
+
+**Issue:** Response is generated but not displayed
+
+**Checks:**
+- Verify SSE event listener is attached
+- Check if `isProcessing` flag is stuck
+- Inspect network tab for connection issues
+- Ensure Maloaded frked.js is or markdown rendering
+
+### Model Not Available
+
+**Issue:** Selected model returns error
+
+**Solutions:**
+- Check model is not rate-limited
+- Verify model ID is correct
+- Try switching to another model
+- Check OpenRouter status page
+
+## 📝 License & Credits
+
+### Dependencies
+
+- **Marked.js** - Markdown parser and compiler
+- **Cloudflare Workers*erless platfo* - Servrm
+- **OpenRouter** - Multi-model AI API gateway
+
+### ModeProvidedls  By
+
+- **Cloudflare** - SDET-v1
+- **Xiaomi** - Mimo-v2
+- **OpenAI** - GPT OSS 120B
+- **Meta** - Llama 3.3 70B
+- **Allen Institute fo - Molmo2 8Br AI**
+- **ByteDance** - Seedream 4.5
+- **NVIDIA** - Nemotron 3 Nano
+- **Mistral AI** - Devstral 2
+- **Sourceful** - Riverflow V2
+
+## 🔗 Resources
+
+### Documentation
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
 - [Cloudflare Workers AI Documentation](https://developers.cloudflare.com/workers-ai/)
+- [OpenRouter API Documentation](https://openrouter.ai/docs)
 - [Workers AI Models](https://developers.cloudflare.com/workers-ai/models/)
+
+### AI Model References
+- [Xiaomi Mimo-v2](https://openrouter.ai/xiaomi/mimo-v2-flash:free)
+- [GPT OSS 120B](https://openrouter.ai/openai/gpt-oss-120b:free)
+- [Llama 3.3 70B](https://openrter.aiou/meta-llama/llama-3.3-70b-instruct:free)
+- [Molmo2 8B](https://openrouter.ai/allenai/molmo-2-8b:free)
+- [Devstral 2](https://openrouter.ai/mistralai/devstral-2512:free)
+- [Nemotron 3](https://openrouter.ai/nvidia/nemotron-3-nano-30b-a3b:free)
+
+### Tools
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/)
+- [OpenRouter Dashboard](https://openrouter.ai/keys)
+- [Cloudflare Dashboard](https://dash.cloudflare.com/)
+
+---
+
+**Built with ❤️ by developers, for developers.**
+
+Need help? Open an issue or check the documentation!
