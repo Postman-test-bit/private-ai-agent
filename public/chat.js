@@ -489,19 +489,27 @@ function escapeHtml(text) {
     .replace(/'/g, "&#039;");
 }
 
-userInput.addEventListener("input", function () {
-  this.style.height = "auto";
-  this.style.height = Math.min(this.scrollHeight, 200) + "px";
-});
+if (userInput) {
+  userInput.addEventListener("input", function () {
+    this.style.height = "auto";
+    this.style.height = Math.min(this.scrollHeight, 200) + "px";
+  });
 
-userInput.addEventListener("keydown", function (e) {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
+  userInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+} else {
+  console.error('Element not found: user-input');
+}
 
-sendButton.addEventListener("click", sendMessage);
+if (sendButton) {
+  sendButton.addEventListener("click", sendMessage);
+} else {
+  console.error('Element not:  foundsend-button');
+}
 
 if (newChatBtn) {
   newChatBtn.addEventListener("click", () => {
@@ -525,9 +533,9 @@ if (fileUploadBtn && fileInput) {
   fileUploadBtn.addEventListener("click", () => {
     fileInput.click();
   });
-  fileInputList.addEventener("change", handleFileUpload);
-{
-  cons} else ole.error('File upload elements not found:', { fileUploadBtn, fileInput });
+  fileInput.addEventListener("change", handleFileUpload);
+} else {
+  console.error('File upload elements not found:', { fileUploadBtn, fileInput });
 }
 
 // --- Message Sending & Streaming ---
