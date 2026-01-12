@@ -22,6 +22,11 @@ export interface Env {
 	 * Claude API Key (from Cloudflare Secrets)
 	 */
 	CLAUDE_KEY?: string;
+
+	/**
+	 * Premium access password (from Cloudflare Secrets)
+	 */
+	PASSWORD?: string;
 }
 
 /**

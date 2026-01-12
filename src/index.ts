@@ -47,6 +47,27 @@ export default {
       );
     }
 
+		if (url.pathname === "/api/auth/premium") {
+      // Validate premium access password
+      if (request.method === "POST") {
+        try {
+          const { password } = (await request.json()) as { password: string };
+          // Check if PASSWORD is configured and matches
+          const isValid = env.PASSWORD && password === env.PASSWORD;
+          return new Response(JSON.stringify({ authenticated: !!isValid }), {
+            status: isValid ? 200 : 401,
+            headers: { "Content-Type": "application/json" },
+          });
+        } catch {
+          return new Response(JSON.stringify({ authenticated: false }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+      return new Response("Method not allowed", { status: 405 });
+    }
+
 		if (url.pathname === "/api/claude") {
       // Handle Claude / HanAPI proxy requests
       if (request.method === "POST") {

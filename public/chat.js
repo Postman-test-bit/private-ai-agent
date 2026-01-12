@@ -19,6 +19,7 @@ let selectedModel = "sdet-v1"; // Default model
 let attachedFiles = [];
 let openRouterApiKey = ""; // Will be fetched from backend
 let claudeApiKey = ""; // Will be fetched from backend
+let isPremiumAuthenticated = sessionStorage.getItem("premiumAuth") === "true"; // Premium access for current session
 
 // Fetch API keys from backend on page load
 (async function fetchConfig() {
@@ -529,10 +530,33 @@ if (newChatBtn) {
 }
 
 if (modelSelector) {
-  modelSelector.addEventListener("change", (e) => {
-    selectedModel = e.target.value;
+  modelSelector.addEventListener("change", async (e) => {
+    const newModel = e.target.value;
+    
+    // Check if selecting a premium model
+    if (newModel.startsWith("claude-") && !isPremiumAuthenticated) {
+      const isAuthed = await authenticatePremium();
+      if (!isAuthed) {
+        // Revert to previous model
+        e.target.value = selectedModel;
+        return;
+      }
+    }
+    
+    selectedModel = newModel;
     localStorage.setItem("selectedModel", selectedModel);
+    
+    // Visual feedback that model changed
+    const modelText = e.target.options[e.target.selectedIndex].text;
+    console.log(`Model switched to: ${modelText}`);
   });
+  
+  // Load saved model on page load
+  const savedModel = localStorage.getItem("selectedModel");
+  if (savedModel) {
+    selectedModel = savedModel;
+    modelSelector.value = savedModel;
+  }
 } else {
   console.error('Element not found: model-selector');
 }
@@ -544,6 +568,43 @@ if (fileUploadBtn && fileInput) {
   fileInput.addEventListener("change", handleFileUpload);
 } else {
   console.error('File upload elements not found:', { fileUploadBtn, fileInput });
+}
+
+// --- Premium Authentication ---
+
+async function authenticatePremium() {
+  const password = prompt(
+    "🔐 Premium Model Access\n\nEnter the premium access password:"
+  );
+  
+  if (!password) {
+    return false; // User cancelled
+  }
+  
+  try {
+    const response = await fetch("/api/auth/premium", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.authenticated) {
+        isPremiumAuthenticated = true;
+        sessionStorage.setItem("premiumAuth", "true");
+        alert("✅ Premium access granted! You can now use Claude models.");
+        return true;
+      }
+    }
+    
+    alert("❌ Invalid password. Premium access denied.");
+    return false;
+  } catch (error) {
+    console.error("Authentication error:", error);
+    alert("❌ Authentication failed. Please try again.");
+    return false;
+  }
 }
 
 // --- Message Sending & Streaming ---
@@ -649,17 +710,11 @@ async function streamResponse(session) {
         case "molmo-2-8b":
           modelId = "allenai/molmo-2-8b:free";
           break;
-        case "seedream-4.5":
-          modelId = "bytedance-seed/seedream-4.5";
-          break;
         case "nemotron-3-nano":
           modelId = "nvidia/nemotron-3-nano-30b-a3b:free";
           break;
-        case "devstral-2512":
-          modelId = "mistralai/devstral-2512:free";
-          break;
-        case "riverflow-v2":
-          modelId = "sourceful/riverflow-v2-max-preview";
+        case "dtral-2512":
+          modelId = "mistralai/devstral-2ee";
           break;
         case "claude-sonnet-4.5":
           modelId = "claude-sonnet-4-5-20250929";
