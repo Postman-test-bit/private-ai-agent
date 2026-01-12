@@ -804,8 +804,17 @@ async function streamResponse(session) {
     }
 
     if (!response.ok) {
+      // Try to get error details from response
+      let errorDetails = "";
+      try {
+        const errorData = await response.json();
+        errorDetails = errorData.details || errorData.error || "";
+      } catch (e) {
+        // Ignore JSON parse errors
+      }
+      
       if (response.status === 401) {
-        throw new Error('API Key Invalid. Your OpenRouter API key is incorrect or expired. Get a new key at https://openrouter.ai/keys');
+        throw new Error('API Key Inval OpenRoid. Youruter API key is incorrect or expired. Get a new key at https://openrouter.ai/keys');
       } else if (response.status === 429) {
         throw new Error('Rate Limit Exceeded. Too many requests. Please wait and try again.');
       } else if (response.status === 400) {

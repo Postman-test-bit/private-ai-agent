@@ -103,10 +103,28 @@ async function handleChatRequest(
 			messages: ChatMessage[];
 		};
 
+		console.log("[SDET-v1] Received messages:", messages.length);
+
 		// Add system prompt if not present
+		let systemMsg: ChatMessage | undefined;
 		if (!messages.some((msg) => msg.role === "system")) {
-			messages.unshift({ role: "system", content: SYSTEM_PROMPT });
+			systemMsg = { role: "system", content: SYSTEM_PROMPT };
+			messages.unshift(systemMsg);
+		} else {
+			systemMsg = messages.find(m => m.role === "system");
 		}
+
+		// Truncate conversation to fit 32k context window (leave room for 1024 output tokens)
+		const MAX_MESSAGES = 15;
+		if (messages.length > MAX_MESSAGES) {
+			const recentMessages = messages.filter(m => m.role !== "system").slice(-(MAX_MESSAGES - 1));
+			messages.length = 0;
+			if (systemMsg) messages.push(systemMsg);
+			messages.push(...recentMessages);
+			console.log("[SDET-v1] Truncated to", messages.length, "messages to fit context window");
+		}
+
+		console.log("[SDET-v1] Calling Workers AI with", messages.length, "messages");
 
 		const stream = await env.AI.run(
 			MODEL_ID,
@@ -133,9 +151,13 @@ async function handleChatRequest(
 			},
 		});
 	} catch (error) {
-		console.error("Error processing chat request:", error);
+		console.error("[SDET-v1] Error processing chat request:", error);
+		const errorMessage = error instanceof Error ? error.message : "Unknown error";
 		return new Response(
-			JSON.stringify({ error: "Failed to process request" }),
+			JSON.stringify({ 
+				error: "Failed to process request",
+				details: errorMessage 
+			}),
 			{
 				status: 500,
 				headers: { "content-type": "application/json" },
