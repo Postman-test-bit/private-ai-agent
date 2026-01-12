@@ -662,13 +662,13 @@ async function streamResponse(session) {
           modelId = "sourceful/riverflow-v2-max-preview";
           break;
         case "claude-sonnet-4.5":
-          modelId = "anthropic/claude-sonnet-4.5";
+          modelId = "claude-sonnet-4-5-20250929";
           break;
-        case "claude-opus-4.1":
-          modelId = "anthropic/claude-opus-4.1";
+        case "claude-opus-4.5":
+          modelId = "claude-opus-4-5-20251101";
           break;
         case "claude-sonnet-3.7":
-          modelId = "anthropic/claude-3.7-sonnet";
+          modelId = "claude-3-7-sonnet-20250219";
           break;
         default:
           modelId = "xiaomi/mimo-v2-flash:free";
