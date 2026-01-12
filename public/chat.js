@@ -508,7 +508,7 @@ if (userInput) {
 if (sendButton) {
   sendButton.addEventListener("click", sendMessage);
 } else {
-  console.error('Element not:  foundsend-button');
+  console.error('Element not found: send-button');
 }
 
 if (newChatBtn) {
