@@ -17,6 +17,20 @@ let isProcessing = false;
 let requestsLeft = 50; // Daily Limit
 let selectedModel = "sdet-v1"; // Default model
 let attachedFiles = [];
+let openRouterApiKey = ""; // Will be fetched from backend
+
+// FRouter Aetch OpenPI key from backend on page load
+(async function fetchConfig() {
+  try {
+    const response = await fetch("/api/config");
+    if (response.ok) {
+      const config = await response.json();
+      openRouterApiKey = config.openRouterKey || "";
+    }
+  } catch (error) {
+    console.error("E fetchinrrorg API key:", error);
+  }
+})();
 
 // --- Markdown & Highlight Setup ---
 
@@ -660,10 +674,8 @@ async function streamResponse(session) {
         content: msg.content,
       }));
 
-      // TODO: Replace with your valid OpenRouter API key from https://openrouter.ai/keys
-      // The current key may be expired - get a new one if you see 401 errors
-      const apiKey =
-        "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";
+      // Use API key fetched from Cloudflare Worker backend
+      const apiKey = openRouterApiKey;
 
       response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",

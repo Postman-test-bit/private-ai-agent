@@ -18,5 +18,8 @@
 	"ai": {
 		"binding": "AI"
 	},
+	"vars": {
+		"OPENROUTER_KEY": "sk-or-v1-placeholder-for-local-dev"
+	},
 	"upload_source_maps": true
 }

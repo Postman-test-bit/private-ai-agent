@@ -34,6 +34,18 @@ export default {
 		}
 
 		// API Routes
+		if (url.pathname === "/api/config") {
+			// Expose OpenRouter API key to frontend
+			return new Response(
+				JSON.stringify({
+					openRouterKey: env.OPENROUTER_KEY || "",
+				}),
+				{
+					headers: { "Content-Type": "application/json" },
+				},
+			);
+		}
+
 		if (url.pathname === "/api/chat") {
 			// Handle POST requests for chat
 			if (request.method === "POST") {

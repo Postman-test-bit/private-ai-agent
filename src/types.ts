@@ -12,6 +12,11 @@ export interface Env {
 	 * Binding for static assets.
 	 */
 	ASSETS: { fetch: (request: Request) => Promise<Response> };
+
+	/**
+	 * OpenRouter API Key (from Cloudflare Secrets)
+	 */
+	OPENROUTER_KEY?: string;
 }
 
 /**
