@@ -662,7 +662,8 @@ async function streamResponse(session) {
 
       // TODO: Replace with your valid OpenRouter API key from https://openrouter.ai/keys
       // The current key may be expired - get a new one if you see 401 errors
-      const apiKey = "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";
+      const apiKey =
+        "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";
 
       response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
