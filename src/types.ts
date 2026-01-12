@@ -17,6 +17,11 @@ export interface Env {
 	 * OpenRouter API Key (from Cloudflare Secrets)
 	 */
 	OPENROUTER_KEY?: string;
+
+	/**
+	 * Claude API Key (from Cloudflare Secrets)
+	 */
+	CLAUDE_KEY?: string;
 }
 
 /**

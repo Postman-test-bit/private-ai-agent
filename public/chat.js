@@ -18,17 +18,19 @@ let requestsLeft = 50; // Daily Limit
 let selectedModel = "sdet-v1"; // Default model
 let attachedFiles = [];
 let openRouterApiKey = ""; // Will be fetched from backend
+let claudeApiKey = ""; // Will be fetched from backend
 
-// FRouter Aetch OpenPI key from backend on page load
+// Fetch API keys from backend on page load
 (async function fetchConfig() {
   try {
     const response = await fetch("/api/config");
     if (response.ok) {
       const config = await response.json();
       openRouterApiKey = config.openRouterKey || "";
+      claudeApiKey = config.claudeKey || "";
     }
   } catch (error) {
-    console.error("E fetchinrrorg API key:", error);
+    console.error("Error fetching API keys:", error);
   }
 })();
 
@@ -307,13 +309,9 @@ function createMessageElement(msg, index) {
       const regenBtn = createBtn("regenerate", "Regenerate", () =>
         regenerateMessage(index)
       );
-      const likeBtn = createBtn("thumbUp", "Good response", () => {});
-      const dislikeBtn = createBtn("thumbDown", "Bad response", () => {});
 
       actionsDiv.appendChild(copyBtn);
       actionsDiv.appendChild(regenBtn);
-      actionsDiv.appendChild(likeBtn);
-      actionsDiv.appendChild(dislikeBtn);
     }
   }
 
@@ -663,6 +661,15 @@ async function streamResponse(session) {
         case "riverflow-v2":
           modelId = "sourceful/riverflow-v2-max-preview";
           break;
+        case "claude-sonnet-4.5":
+          modelId = "anthropic/claude-sonnet-4.5";
+          break;
+        case "claude-opus-4.1":
+          modelId = "anthropic/claude-opus-4.1";
+          break;
+        case "claude-sonnet-3.7":
+          modelId = "anthropic/claude-3.7-sonnet";
+          break;
         default:
           modelId = "xiaomi/mimo-v2-flash:free";
       }
@@ -684,20 +691,41 @@ async function streamResponse(session) {
         content: msg.content,
       }));
 
-      // Use API key fetched from Cloudflare Worker backend
-      const apiKey = openRouterApiKey;
+      // Determine which API to use based on model
+      const isClaudeModel = selectedModel.startsWith("claude-");
+      const apiKey = isClaudeModel ? claudeApiKey : openRouterApiKey;
+      const apiUrl = isClaudeModel 
+        ? "https://api.anthropic.com/v1/messages"
+        : "https://openrouter.ai/api/v1/chat/completions";
 
-      response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const headers = {
+        "Content-Type": "application/json",
+      };
+
+      if (isClaudeModel) {
+        headers["x-api-key"] = apiKey;
+        headers["anthropic-version"] = "2023-06-01";
+      } else {
+        headers["Authorization"] = `Bearer ${apiKey}`;
+      }
+
+      const requestBody = isClaudeModel
+        ? {
+            model: modelId,
+            messages: formattedMessages,
+            max_tokens: 4096,
+            stream: true,
+          }
+        : {
+            model: modelId,
+            messages: formattedMessages,
+            stream: true,
+          };
+
+      response = await fetch(apiUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: modelId,
-          messages: formattedMessages,
-          stream: true,
-        }),
+        headers,
+        body: JSON.stringify(requestBody),
       });
     } else {
       // Use default Cloudflare Workers AI
