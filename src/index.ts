@@ -47,15 +47,22 @@ export default {
       );
     }
 
-		if (url.pathname === "/api/chat") {
-			// Handle POST requests for chat
-			if (request.method === "POST") {
-				return handleChatRequest(request, env);
-			}
+		if (url.pathname === "/api/claude") {
+      // Handle Claude / HanAPI proxy requests
+      if (request.method === "POST") {
+        return handleClaudeRequest(request, env);
+      }
+      return new Response("Method not allowed", { status: 405 });
+    }
+	if (url.pathname === "/api/chat") {
+    // Handle POST requests for chat
+    if (request.method === "POST") {
+      return handleChatRequest(request, env);
+    }
 
-			// Method not allowed for other request types
-			return new Response("Method not allowed", { status: 405 });
-		}
+    // Method not allowed for other request types
+    return new Response("Method not allowed", { status: 405 });
+  }
 
 		// Handle 404 for unmatched routes
 		return new Response("Not found", { status: 404 });
@@ -108,6 +115,78 @@ async function handleChatRequest(
 		console.error("Error processing chat request:", error);
 		return new Response(
 			JSON.stringify({ error: "Failed to process request" }),
+			{
+				status: 500,
+				headers: { "content-type": "application/json" },
+			},
+		);
+	}
+}
+
+/**
+ * Handles Claude API proxy requests
+ */
+async function handleClaudeRequest(
+	request: Request,
+	env: Env,
+): Promise<Response> {
+	try {
+		const { model, messages } = (await request.json()) as {
+			model: string;
+			messages: ChatMessage[];
+		};
+
+		if (!env.CLAUDE_KEY) {
+			return new Response(
+				JSON.stringify({ error: "Claude API key not configured" }),
+				{
+					status: 500,
+					headers: { "content-type": "application/json" },
+				},
+			);
+		}
+
+		const claudeResponse = await fetch(
+			"https://api.anthropic.com/v1/messages",
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"x-api-key": env.CLAUDE_KEY,
+					"anthropic-version": "2023-06-01",
+				},
+				body: JSON.stringify({
+					model,
+					messages,
+					max_tokens: 4096,
+					stream: true,
+				}),
+			},
+		);
+
+		if (!claudeResponse.ok) {
+			const errorText = await claudeResponse.text();
+			console.error("Claude API error:", errorText);
+			return new Response(
+				JSON.stringify({ error: "Claude API request failed" }),
+				{
+					status: claudeResponse.status,
+					headers: { "content-type": "application/json" },
+				},
+			);
+		}
+
+		return new Response(claudeResponse.body, {
+			headers: {
+				"content-type": "text/event-stream; charset=utf-8",
+				"cache-control": "no-cache",
+				connection: "keep-alive",
+			},
+		});
+	} catch (error) {
+		console.error("Error processing Claude request:", error);
+		return new Response(
+			JSON.stringify({ error: "Failed to process Claude request" }),
 			{
 				status: 500,
 				headers: { "content-type": "application/json" },

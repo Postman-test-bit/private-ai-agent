@@ -691,42 +691,35 @@ async function streamResponse(session) {
         content: msg.content,
       }));
 
-      // Determine which API to use based on model
+      // Use backend proxy for Claude models to avoid CORS
       const isClaudeModel = selectedModel.startsWith("claude-");
-      const apiKey = isClaudeModel ? claudeApiKey : openRouterApiKey;
-      const apiUrl = isClaudeModel 
-        ? "https://api.anthropic.com/v1/messages"
-        : "https://openrouter.ai/api/v1/chat/completions";
-
-      const headers = {
-        "Content-Type": "application/json",
-      };
-
+      
       if (isClaudeModel) {
-        headers["x-api-key"] = apiKey;
-        headers["anthropic-version"] = "2023-06-01";
+        // Route through backend /api/claude endpoint
+        response = await fetch("/api/claude", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: modelId,
+            messages: formattedMessages,
+          }),
+        });
       } else {
-        headers["Authorization"] = `Bearer ${apiKey}`;
+        // Use OpenRouter API directly for free models
+        const apiKey = openRouterApiKey;
+        response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: modelId,
+            messages: formattedMessages,
+            stream: true,
+          }),
+        });
       }
-
-      const requestBody = isClaudeModel
-        ? {
-            model: modelId,
-            messages: formattedMessages,
-            max_tokens: 4096,
-            stream: true,
-          }
-        : {
-            model: modelId,
-            messages: formattedMessages,
-            stream: true,
-          };
-
-      response = await fetch(apiUrl, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(requestBody),
-      });
     } else {
       // Use default Cloudflare Workers AI
       // Prepare messages (file content already included in msg.content)
