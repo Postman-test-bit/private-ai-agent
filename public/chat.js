@@ -573,11 +573,21 @@ async function sendMessage() {
     messageContent += "=== ATTACHED FILES ===\n\n";
     filesData.forEach((file) => {
       messageContent += `--- File: ${file.name} ---\n`;
-      if (file.content && file.content !== `[Binary file: ${file.name}]`) {
+      
+      // Handle images with data URLs
+      if (file.type && file.type.startsWith("image/") && file.content && file.content.startsWith("data:image")) {
+        messageContent += `[Image: ${file.name}]\n`;
+        messageContent += `![${file.name}](${file.content})`;
+      }
+      // Handle text files
+      else if (file.content && file.content !== `[Binary file: ${file.name}]`) {
         messageContent += file.content;
-      } else {
+      }
+      // Handle binary files
+      else {
         messageContent += `[Binary file - content not extracted]`;
       }
+      
       messageContent += `\n\n`;
     });
     messageContent += "=== END OF FILES ===";
@@ -860,7 +870,10 @@ async function extractFileContent(file) {
       file.name.toLowerCase().endsWith(ext)
     );
 
-    if (isTextFile || file.type.startsWith("text/")) {
+    // Handle images - convert to base64 data URL for vision models
+    if (file.type.startsWith("image/")) {
+      reader.readAsDataURL(file);
+    } else if (isTextFile || file.type.startsWith("text/")) {
       reader.readAsText(file);
     } else {
       resolve(`[Binary file: ${file.name}]`);
