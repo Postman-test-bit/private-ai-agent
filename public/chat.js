@@ -503,21 +503,32 @@ userInput.addEventListener("keydown", function (e) {
 
 sendButton.addEventListener("click", sendMessage);
 
-newChatBtn.addEventListener("click", () => {
-  const newSessionId = createNewSession();
-  switchToSession(newSessionId);
-});
+if (newChatBtn) {
+  newChatBtn.addEventListener("click", () => {
+    const newSessionId = createNewSession();
+    switchToSession(newSessionId);
+  });
+} else {
+  console.error('Element not found: new-chat-btn');
+}
 
-modelSelector.addEventListener("change", (e) => {
-  selectedModel = e.target.value;
-  localStorage.setItem("selectedModel", selectedModel);
-});
+if (modelSelector) {
+  modelSelector.addEventListener("change", (e) => {
+    selectedModel = e.target.value;
+    localStorage.setItem("selectedModel", selectedModel);
+  });
+} else {
+  console.error('Element not found: model-selector');
+}
 
-fileUploadBtn.addEventListener("click", () => {
-  fileInput.click();
-});
-
-fileInput.addEventListener("change", handleFileUpload);
+if (fileUploadBtn && fileInput) {
+  fileUploadBtn.addEventListener("click", () => {
+    fileInput.click();
+  });
+  fileInputList.addEventener("change", handleFileUpload);
+{
+  cons} else ole.error('File upload elements not found:', { fileUploadBtn, fileInput });
+}
 
 // --- Message Sending & Streaming ---
 
