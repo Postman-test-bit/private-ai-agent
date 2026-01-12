@@ -692,6 +692,7 @@ async function streamResponse(session) {
 
   try {
     let response;
+    console.log("[DEBUG] Sending message with model:", selectedModel);
 
     if (selectedModel !== "sdet-v1") {
       // Use OpenRouter API for non-Cloudflare models
