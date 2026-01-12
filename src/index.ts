@@ -98,59 +98,94 @@ async function handleChatRequest(
 	env: Env,
 ): Promise<Response> {
 	try {
-		// Parse JSON request body
-		const { messages = [] } = (await request.json()) as {
-			messages: ChatMessage[];
-		};
+    // Parse JSON request body
+    const { messages = [] } = (await request.json()) as {
+      messages: ChatMessage[];
+    };
 
-		console.log("[SDET-v1] Received messages:", messages.length);
+    console.log("[SDET-v1] Received messages:", messages.length);
 
-		// Add system prompt if not present
-		let systemMsg: ChatMessage | undefined;
-		if (!messages.some((msg) => msg.role === "system")) {
-			systemMsg = { role: "system", content: SYSTEM_PROMPT };
-			messages.unshift(systemMsg);
-		} else {
-			systemMsg = messages.find(m => m.role === "system");
-		}
+    // Add system prompt if not present
+    let systemMsg: ChatMessage | undefined;
+    if (!messages.some((msg) => msg.role === "system")) {
+      systemMsg = { role: "system", content: SYSTEM_PROMPT };
+      messages.unshift(systemMsg);
+    } else {
+      systemMsg = messages.find((m) => m.role === "system");
+    }
 
-		// Truncate conversation to fit 32k context window (leave room for 1024 output tokens)
-		const MAX_MESSAGES = 15;
-		if (messages.length > MAX_MESSAGES) {
-			const recentMessages = messages.filter(m => m.role !== "system").slice(-(MAX_MESSAGES - 1));
-			messages.length = 0;
-			if (systemMsg) messages.push(systemMsg);
-			messages.push(...recentMessages);
-			console.log("[SDET-v1] Truncated to", messages.length, "messages to fit context window");
-		}
+    // Strip file attachments to fit context window
+    const MAX_CONTENT_PER_MESSAGE = 1000;
+    messages.forEach((msg) => {
+      // Remove entire file attachment section
+      if (msg.content.includes("=== ATTACHED FILES ===")) {
+        const mainContent = msg.content.split("=== ATTACHED FILES ===")[0].trim();
+        msg.content = mainContent + "\n\n[File attachments removed to fit context]";
+        console.log("[SDET-v1] Stripped file attachments");
+      }
+      // Truncate very long messages
+      if (msg.content.length > MAX_CONTENT_PER_MESSAGE) {
+        msg.content =
+          msg.content.substring(0, MAX_CONTENT_PER_MESSAGE) + "\n...[truncated]";
+      }
+    });
 
-		console.log("[SDET-v1] Calling Workers AI with", messages.length, "messages");
+    // Keep only recent messages
+    const MAX_MESSAGES = 8;
+    if (messages.length > MAX_MESSAGES) {
+      const recentMessages = messages
+        .filter((m) => m.role !== "system")
+        .slice(-(MAX_MESSAGES - 1));
+      messages.length = 0;
+      if (systemMsg) messages.push(systemMsg);
+      messages.push(...recentMessages);
+      console.log("[SDET-v1] Kept last", messages.length, "messages");
+    }
 
-		const stream = await env.AI.run(
-			MODEL_ID,
-			{
-				messages,
-				max_tokens: 1024,
-				stream: true,
-			},
-			{
-				// Uncomment to use AI Gateway
-				// gateway: {
-				//   id: "YOUR_GATEWAY_ID", // Replace with your AI Gateway ID
-				//   skipCache: false,      // Set to true to bypass cache
-				//   cacheTtl: 3600,        // Cache time-to-live in seconds
-				// },
-			},
-		);
+    const totalChars = messages.reduce((sum, m) => sum + m.content.length, 0);
+    console.log(
+      "[SDET-v1] Approx tokens:",
+      Math.ceil(totalChars / 4),
+      "/ 32000",
+    );
 
-		return new Response(stream, {
-			headers: {
-				"content-type": "text/event-stream; charset=utf-8",
-				"cache-control": "no-cache",
-				connection: "keep-alive",
-			},
-		});
-	} catch (error) {
+    console.log(
+      "[SDET-v1] Calling Workers AI with",
+      messages.length,
+      "messages"
+    );
+
+    if (!env.AI) {
+      throw new Error(
+        "Workers AI binding not configured. Please check wrangler.jsonc"
+      );
+    }
+
+    const stream = await env.AI.run(
+      MODEL_ID,
+      {
+        messages,
+        max_tokens: 1024,
+        stream: true,
+      },
+      {
+        // Uncomment to use AI Gateway
+        // gateway: {
+        //   id: "YOUR_GATEWAY_ID", // Replace with your AI Gateway ID
+        //   skipCache: false,      // Set to true to bypass cache
+        //   cacheTtl: 3600,        // Cache time-to-live in seconds
+        // },
+      }
+    );
+
+    return new Response(stream, {
+      headers: {
+        "content-type": "text/event-stream; charset=utf-8",
+        "cache-control": "no-cache",
+        connection: "keep-alive",
+      },
+    });
+  } catch (error) {
 		console.error("[SDET-v1] Error processing chat request:", error);
 		const errorMessage = error instanceof Error ? error.message : "Unknown error";
 		return new Response(
