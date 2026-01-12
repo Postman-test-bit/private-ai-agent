@@ -789,9 +789,19 @@ async function streamResponse(session) {
         try {
           const jsonData = JSON.parse(data);
           let content = "";
-          if (jsonData.response) content = jsonData.response;
-          else if (jsonData.choices?.[0]?.delta?.content)
-            content = jsonData.choices[0].delta.content;
+
+          // Handle Claude API format (content_block_delta)
+          if (jsonData.type === "content_block_delta" && jsonData.delta?.text) {
+            content = jsonData.delta.text;
+          }
+          // Handle OpenRouter/Cloudflare format
+          else if (jsonData.response) {
+            content = jsonData.response;
+          }
+          // Handle standard OpenAI format
+          else if (jsonData.choices?.[0]?.delta?.content) {
+                   content = jsonData.choices[0].delta.content;
+          }
 
           if (content) {
             fullResponseText += content;
