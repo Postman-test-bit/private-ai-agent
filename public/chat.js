@@ -847,6 +847,81 @@ async function streamResponse(session) {
       buffer = result.buffer;
     }
 
+    function renderAttachedFiles() {
+      attachedFilesDiv.innerHTML = "";
+
+      if (attachedFiles.length > 0) {
+        fileChipsContainer.classList.remove("hidden");
+
+        attachedFiles.forEach((file, index) => {
+          const isImage = file.type && file.type.startsWith("image/");
+
+          if (
+            isImage &&
+            file.content &&
+            file.content.startsWith("data:image")
+          ) {
+            // Create image preview card
+            const imageCard = document.createElement("div");
+            imageCard.style.cssText =
+              "display:inline-block;margin:4px;padding:8px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--bg-surface);max-width:200px;vertical-align:top;";
+
+            const imgPreview = document.createElement("img");
+            imgPreview.src = file.content;
+            imgPreview.style.cssText =
+              "width:100%;max-width:180px;height:auto;max-height:120px;object-fit:contain;border-radius:4px;display:block;";
+
+            const imgInfo = document.createElement("div");
+            imgInfo.style.cssText =
+              "display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:8px;";
+
+            const imgName = document.createElement("span");
+            imgName.textContent = file.name;
+            imgName.style.cssText =
+              "font-size:0.75rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;";
+
+            const removeBtn = document.createElement("button");
+            removeBtn.innerHTML = "×";
+            removeBtn.style.cssText =
+              "background:var(--error,#ef4444);color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:16px;line-height:1;padding:0;flex-shrink:0;";
+            removeBtn.onclick = () => removeFile(index);
+
+            imgInfo.appendChild(imgName);
+            imgInfo.appendChild(removeBtn);
+            imageCard.appendChild(imgPreview);
+            imageCard.appendChild(imgInfo);
+            attachedFilesDiv.appendChild(imageCard);
+          } else {
+            // Regular file chip
+            const chip = document.createElement("div");
+            chip.className = "file-chip";
+
+            const fileIcon = document.createElement("img");
+            fileIcon.src = getFileIcon(file.name);
+            fileIcon.style.width = "16px";
+            fileIcon.style.height = "16px";
+            fileIcon.style.objectFit = "contain";
+            fileIcon.style.marginRight = "6px";
+
+            const fileName = document.createElement("span");
+            fileName.textContent = file.name;
+
+            const removeBtn = document.createElement("button");
+            removeBtn.className = "file-chip-remove";
+            removeBtn.innerHTML = "×";
+            removeBtn.onclick = () => removeFile(index);
+
+            chip.appendChild(fileIcon);
+            chip.appendChild(fileName);
+            chip.appendChild(removeBtn);
+            attachedFilesDiv.appendChild(chip);
+          }
+        });
+      } else {
+        fileChipsContainer.classList.add("hidden");
+      }
+    }
+
     function processBuffer(inputBuffer) {
       const parsed = consumeSseEvents(inputBuffer);
       for (const data of parsed.events) {
